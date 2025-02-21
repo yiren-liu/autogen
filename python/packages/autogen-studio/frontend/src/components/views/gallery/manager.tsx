@@ -85,14 +85,12 @@ export const GalleryManager: React.FC = () => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
-      items: galleryData.items || {
+      components: galleryData.components || {
         teams: [],
-        components: {
-          agents: [],
-          models: [],
-          tools: [],
-          terminations: [],
-        },
+        agents: [],
+        models: [],
+        tools: [],
+        terminations: [],
       },
     };
 
@@ -166,7 +164,7 @@ export const GalleryManager: React.FC = () => {
 
       {/* Main Content */}
       <div
-        className={`flex-1 transition-all -mr-6 duration-200 ${
+        className={`flex-1 transition-all max-w-5xl -mr-6 duration-200 ${
           isSidebarOpen ? "ml-64" : "ml-12"
         }`}
       >

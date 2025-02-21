@@ -1,5 +1,6 @@
 import {
   AgentConfig,
+  Component,
   ModelConfig,
   TeamConfig,
   TerminationConfig,
@@ -24,14 +25,12 @@ export interface Gallery {
   name: string;
   url?: string;
   metadata: GalleryMetadata;
-  items: {
-    teams: TeamConfig[];
-    components: {
-      agents: AgentConfig[];
-      models: ModelConfig[];
-      tools: ToolConfig[];
-      terminations: TerminationConfig[];
-    };
+  components: {
+    teams: Component<TeamConfig>[];
+    agents: Component<AgentConfig>[];
+    models: Component<ModelConfig>[];
+    tools: Component<ToolConfig>[];
+    terminations: Component<TerminationConfig>[];
   };
 }
 

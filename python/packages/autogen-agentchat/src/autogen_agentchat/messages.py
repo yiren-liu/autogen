@@ -8,9 +8,10 @@ from abc import ABC
 from typing import List, Literal
 
 from autogen_core import FunctionCall, Image
-from autogen_core.models import FunctionExecutionResult, RequestUsage
+from autogen_core.memory import MemoryContent
+from autogen_core.models import FunctionExecutionResult, LLMMessage, RequestUsage
 from pydantic import BaseModel, ConfigDict, Field
-from typing_extensions import Annotated, deprecated
+from typing_extensions import Annotated
 
 
 class BaseMessage(BaseModel, ABC):
@@ -73,27 +74,10 @@ class HandoffMessage(BaseChatMessage):
     content: str
     """The handoff message to the target agent."""
 
+    context: List[LLMMessage] = []
+    """The model context to be passed to the target agent."""
+
     type: Literal["HandoffMessage"] = "HandoffMessage"
-
-
-@deprecated("Will be removed in 0.4.0, use ToolCallRequestEvent instead.")
-class ToolCallMessage(BaseMessage):
-    """A message signaling the use of tools."""
-
-    content: List[FunctionCall]
-    """The tool calls."""
-
-    type: Literal["ToolCallMessage"] = "ToolCallMessage"
-
-
-@deprecated("Will be removed in 0.4.0, use ToolCallExecutionEvent instead.")
-class ToolCallResultMessage(BaseMessage):
-    """A message signaling the results of tool calls."""
-
-    content: List[FunctionExecutionResult]
-    """The tool call results."""
-
-    type: Literal["ToolCallResultMessage"] = "ToolCallResultMessage"
 
 
 class ToolCallRequestEvent(BaseAgentEvent):
@@ -123,41 +107,65 @@ class ToolCallSummaryMessage(BaseChatMessage):
     type: Literal["ToolCallSummaryMessage"] = "ToolCallSummaryMessage"
 
 
+class UserInputRequestedEvent(BaseAgentEvent):
+    """An event signaling a that the user proxy has requested user input. Published prior to invoking the input callback."""
+
+    request_id: str
+    """Identifier for the user input request."""
+
+    content: Literal[""] = ""
+    """Empty content for compat with consumers expecting a content field."""
+
+    type: Literal["UserInputRequestedEvent"] = "UserInputRequestedEvent"
+
+
+class MemoryQueryEvent(BaseAgentEvent):
+    """An event signaling the results of memory queries."""
+
+    content: List[MemoryContent]
+    """The memory query results."""
+
+    type: Literal["MemoryQueryEvent"] = "MemoryQueryEvent"
+
+
+class ModelClientStreamingChunkEvent(BaseAgentEvent):
+    """An event signaling a text output chunk from a model client in streaming mode."""
+
+    content: str
+    """The partial text chunk."""
+
+    type: Literal["ModelClientStreamingChunkEvent"] = "ModelClientStreamingChunkEvent"
+
+
 ChatMessage = Annotated[
     TextMessage | MultiModalMessage | StopMessage | ToolCallSummaryMessage | HandoffMessage, Field(discriminator="type")
 ]
 """Messages for agent-to-agent communication only."""
 
 
-AgentEvent = Annotated[ToolCallRequestEvent | ToolCallExecutionEvent, Field(discriminator="type")]
+AgentEvent = Annotated[
+    ToolCallRequestEvent
+    | ToolCallExecutionEvent
+    | MemoryQueryEvent
+    | UserInputRequestedEvent
+    | ModelClientStreamingChunkEvent,
+    Field(discriminator="type"),
+]
 """Events emitted by agents and teams when they work, not used for agent-to-agent communication."""
 
 
-AgentMessage = Annotated[
-    TextMessage
-    | MultiModalMessage
-    | StopMessage
-    | HandoffMessage
-    | ToolCallRequestEvent
-    | ToolCallExecutionEvent
-    | ToolCallSummaryMessage,
-    Field(discriminator="type"),
-]
-"""(Deprecated, will be removed in 0.4.0) All message and event types."""
-
-
 __all__ = [
+    "AgentEvent",
     "BaseMessage",
-    "TextMessage",
+    "ChatMessage",
+    "HandoffMessage",
     "MultiModalMessage",
     "StopMessage",
-    "HandoffMessage",
-    "ToolCallRequestEvent",
+    "TextMessage",
     "ToolCallExecutionEvent",
-    "ToolCallMessage",
-    "ToolCallResultMessage",
+    "ToolCallRequestEvent",
     "ToolCallSummaryMessage",
-    "ChatMessage",
-    "AgentEvent",
-    "AgentMessage",
+    "MemoryQueryEvent",
+    "UserInputRequestedEvent",
+    "ModelClientStreamingChunkEvent",
 ]

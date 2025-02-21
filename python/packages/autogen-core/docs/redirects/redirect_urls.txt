@@ -1,4 +1,4 @@
-/autogen/,/autogen/0.2/
+/autogen/,/autogen/stable/
 /autogen/docs/Getting-Started,/autogen/0.2/docs/Getting-Started
 /autogen/docs/installation/,/autogen/0.2/docs/installation/
 /autogen/docs/tutorial/introduction,/autogen/0.2/docs/tutorial/introduction
@@ -351,3 +351,4 @@
 /autogen/docs/reference/agentchat/contrib/vectordb/utils,/autogen/0.2/docs/reference/agentchat/contrib/vectordb/utils
 /autogen/0.4.0dev0/,/autogen/0.4.0.dev0/
 /autogen/0.4.0dev1/,/autogen/0.4.0.dev1/
+/autogen/dotnet/,/autogen/dotnet/dev/

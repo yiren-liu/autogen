@@ -31,10 +31,28 @@ How to install AgentChat
 Build your first agent
 :::
 
-:::{grid-item-card} {fas}`graduation-cap;pst-color-primary` Tutorial
-:link: ./tutorial/models.html
+:::{grid-item-card} {fas}`school;pst-color-primary` Tutorial
+:link: ./tutorial/index.html
 
-Step-by-step guide to using AgentChat
+Step-by-step guide to using AgentChat, learn about agents, teams, and more
+:::
+
+:::{grid-item-card} {fas}`sitemap;pst-color-primary` Selector Group Chat
+:link: ./selector-group-chat.html
+
+Multi-agent coordination through a shared context and centralized, customizable selector
+:::
+
+:::{grid-item-card} {fas}`dove;pst-color-primary` Swarm
+:link: ./swarm.html
+
+Multi-agent coordination through a shared context and localized, tool-based selector
+:::
+
+:::{grid-item-card} {fas}`book;pst-color-primary` Magentic-One
+:link: ./magentic-one.html
+
+Get started with Magentic-One
 :::
 
 :::{grid-item-card} {fas}`code;pst-color-primary` Examples
@@ -47,6 +65,18 @@ Sample code and use cases
 :link: ./migration-guide.html
 
 How to migrate from AutoGen 0.2.x to 0.4.x.
+:::
+
+:::{grid-item-card} {fas}`save;pst-color-primary` Serialize Components
+:link: ./serialize-components.html
+
+Serialize and deserialize components
+:::
+
+:::{grid-item-card} {fas}`brain;pst-color-primary` Memory
+:link: ./memory.html
+
+Add memory capabilities to your agents
 :::
 ::::
 
@@ -64,16 +94,30 @@ migration-guide
 :hidden:
 :caption: Tutorial
 
+tutorial/index
 tutorial/models
 tutorial/messages
 tutorial/agents
 tutorial/teams
 tutorial/human-in-the-loop
-tutorial/selector-group-chat
-tutorial/swarm
 tutorial/termination
-tutorial/custom-agents
+
 tutorial/state
+
+```
+
+```{toctree}
+:maxdepth: 1
+:hidden:
+:caption: Advanced
+
+custom-agents
+selector-group-chat
+swarm
+magentic-one
+memory
+serialize-components
+
 ```
 
 ```{toctree}

@@ -27,7 +27,6 @@ if sys.version_info >= (3, 13):
 else:
     from ._queue import Queue, QueueShutDown  # type: ignore
 
-from typing_extensions import deprecated
 
 from ._agent import Agent
 from ._agent_id import AgentId
@@ -147,6 +146,103 @@ def _warn_if_none(value: Any, handler_name: str) -> None:
 
 
 class SingleThreadedAgentRuntime(AgentRuntime):
+    """A single-threaded agent runtime that processes all messages using a single asyncio queue.
+    Messages are delivered in the order they are received, and the runtime processes
+    each message in a separate asyncio task concurrently.
+
+    .. note::
+
+        This runtime is suitable for development and standalone applications.
+        It is not suitable for high-throughput or high-concurrency scenarios.
+
+    Args:
+        intervention_handlers (List[InterventionHandler], optional): A list of intervention
+            handlers that can intercept messages before they are sent or published. Defaults to None.
+        tracer_provider (TracerProvider, optional): The tracer provider to use for tracing. Defaults to None.
+
+    Examples:
+
+        A simple example of creating a runtime, registering an agent, sending a message and stopping the runtime:
+
+        .. code-block:: python
+
+            import asyncio
+            from dataclasses import dataclass
+
+            from autogen_core import AgentId, MessageContext, RoutedAgent, SingleThreadedAgentRuntime, message_handler
+
+
+            @dataclass
+            class MyMessage:
+                content: str
+
+
+            class MyAgent(RoutedAgent):
+                @message_handler
+                async def handle_my_message(self, message: MyMessage, ctx: MessageContext) -> None:
+                    print(f"Received message: {message.content}")
+
+
+            async def main() -> None:
+                # Create a runtime and register the agent
+                runtime = SingleThreadedAgentRuntime()
+                await MyAgent.register(runtime, "my_agent", lambda: MyAgent("My agent"))
+
+                # Start the runtime, send a message and stop the runtime
+                runtime.start()
+                await runtime.send_message(MyMessage("Hello, world!"), recipient=AgentId("my_agent", "default"))
+                await runtime.stop()
+
+
+            asyncio.run(main())
+
+        An example of creating a runtime, registering an agent, publishing a message and stopping the runtime:
+
+        .. code-block:: python
+
+            import asyncio
+            from dataclasses import dataclass
+
+            from autogen_core import (
+                DefaultTopicId,
+                MessageContext,
+                RoutedAgent,
+                SingleThreadedAgentRuntime,
+                default_subscription,
+                message_handler,
+            )
+
+
+            @dataclass
+            class MyMessage:
+                content: str
+
+
+            # The agent is subscribed to the default topic.
+            @default_subscription
+            class MyAgent(RoutedAgent):
+                @message_handler
+                async def handle_my_message(self, message: MyMessage, ctx: MessageContext) -> None:
+                    print(f"Received message: {message.content}")
+
+
+            async def main() -> None:
+                # Create a runtime and register the agent
+                runtime = SingleThreadedAgentRuntime()
+                await MyAgent.register(runtime, "my_agent", lambda: MyAgent("My agent"))
+
+                # Start the runtime.
+                runtime.start()
+                # Publish a message to the default topic that the agent is subscribed to.
+                await runtime.publish_message(MyMessage("Hello, world!"), DefaultTopicId())
+                # Wait for the message to be processed and then stop the runtime.
+                await runtime.stop_when_idle()
+
+
+            asyncio.run(main())
+
+    """
+
     def __init__(
         self,
         *,
@@ -309,6 +405,7 @@ class SingleThreadedAgentRuntime(AgentRuntime):
                     )
                 )
                 recipient_agent = await self._get_agent(recipient)
+
                 message_context = MessageContext(
                     sender=message_envelope.sender,
                     topic_id=None,
@@ -454,8 +551,8 @@ class SingleThreadedAgentRuntime(AgentRuntime):
                 message_envelope.future.set_result(message_envelope.message)
             self._message_queue.task_done()
 
-    @deprecated("Manually stepping the runtime processing is deprecated. Use start() instead.")
     async def process_next(self) -> None:
+        """Process the next message in the queue."""
         await self._process_next()
 
     async def _process_next(self) -> None:
@@ -474,7 +571,16 @@ class SingleThreadedAgentRuntime(AgentRuntime):
                             "intercept", handler.__class__.__name__, parent=message_envelope.metadata
                         ):
                             try:
-                                temp_message = await handler.on_send(message, sender=sender, recipient=recipient)
+                                message_context = MessageContext(
+                                    sender=sender,
+                                    topic_id=None,
+                                    is_rpc=True,
+                                    cancellation_token=message_envelope.cancellation_token,
+                                    message_id=message_envelope.message_id,
+                                )
+                                temp_message = await handler.on_send(
+                                    message, message_context=message_context, recipient=recipient
+                                )
                                 _warn_if_none(temp_message, "on_send")
                             except BaseException as e:
                                 future.set_exception(e)
@@ -506,7 +612,14 @@ class SingleThreadedAgentRuntime(AgentRuntime):
                             "intercept", handler.__class__.__name__, parent=message_envelope.metadata
                         ):
                             try:
-                                temp_message = await handler.on_publish(message, sender=sender)
+                                message_context = MessageContext(
+                                    sender=sender,
+                                    topic_id=topic_id,
+                                    is_rpc=False,
+                                    cancellation_token=message_envelope.cancellation_token,
+                                    message_id=message_envelope.message_id,
+                                )
+                                temp_message = await handler.on_publish(message, message_context=message_context)
                                 _warn_if_none(temp_message, "on_publish")
                             except BaseException as e:
                                 # TODO: we should raise the intervention exception to the publisher.
@@ -563,20 +676,41 @@ class SingleThreadedAgentRuntime(AgentRuntime):
 
         .. code-block:: python
 
+            import asyncio
             from autogen_core import SingleThreadedAgentRuntime
 
-            runtime = SingleThreadedAgentRuntime()
-            runtime.start()
+
+            async def main() -> None:
+                runtime = SingleThreadedAgentRuntime()
+                runtime.start()
+
+                # ... do other things ...
+
+                await runtime.stop()
+
+
+            asyncio.run(main())
 
         """
         if self._run_context is not None:
             raise RuntimeError("Runtime is already started")
         self._run_context = RunContext(self)
 
+    async def close(self) -> None:
+        """Calls :meth:`stop` if applicable and the :meth:`Agent.close` method on all instantiated agents"""
+        # stop the runtime if it hasn't been stopped yet
+        if self._run_context is not None:
+            await self.stop()
+        # close all the agents that have been instantiated
+        for agent_id in self._instantiated_agents:
+            agent = await self._get_agent(agent_id)
+            await agent.close()
+
     async def stop(self) -> None:
         """Immediately stop the runtime message processing loop. The currently processing message will be completed, but all others following it will be discarded."""
         if self._run_context is None:
             raise RuntimeError("Runtime is not started")
+
         await self._run_context.stop()
         self._run_context = None
         self._message_queue = Queue()
@@ -587,6 +721,7 @@ class SingleThreadedAgentRuntime(AgentRuntime):
         if self._run_context is None:
             raise RuntimeError("Runtime is not started")
         await self._run_context.stop_when_idle()
+
         self._run_context = None
         self._message_queue = Queue()
 
@@ -607,6 +742,7 @@ class SingleThreadedAgentRuntime(AgentRuntime):
         if self._run_context is None:
             raise RuntimeError("Runtime is not started")
         await self._run_context.stop_when(condition)
+
         self._run_context = None
         self._message_queue = Queue()
 
@@ -639,7 +775,7 @@ class SingleThreadedAgentRuntime(AgentRuntime):
             else:
                 agent_instance = maybe_agent_instance
 
-            if type_func_alias(agent_instance) != expected_class:
+            if expected_class is not None and type_func_alias(agent_instance) != expected_class:
                 raise ValueError("Factory registered using the wrong type.")
 
             return agent_instance

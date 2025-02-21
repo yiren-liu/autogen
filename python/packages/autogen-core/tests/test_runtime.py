@@ -33,6 +33,31 @@ def tracer_provider() -> TracerProvider:
 
 
 @pytest.mark.asyncio
+async def test_agent_type_register_factory() -> None:
+    runtime = SingleThreadedAgentRuntime()
+
+    def agent_factory() -> NoopAgent:
+        id = AgentInstantiationContext.current_agent_id()
+        assert id == AgentId("name1", "default")
+        agent = NoopAgent()
+        assert agent.id == id
+        return agent
+
+    await runtime.register_factory(type=AgentType("name1"), agent_factory=agent_factory, expected_class=NoopAgent)
+
+    with pytest.raises(ValueError):
+        # This should fail because the expected class does not match the actual class.
+        await runtime.register_factory(
+            type=AgentType("name1"),
+            agent_factory=agent_factory,  # type: ignore
+            expected_class=CascadingAgent,
+        )
+
+    # Without expected_class, no error.
+    await runtime.register_factory(type=AgentType("name2"), agent_factory=agent_factory)
+
+
+@pytest.mark.asyncio
 async def test_agent_type_must_be_unique() -> None:
     runtime = SingleThreadedAgentRuntime()
 
@@ -86,6 +111,8 @@ async def test_register_receives_publish(tracer_provider: TracerProvider) -> Non
         "autogen publish default.(default)-T",
     ]
 
+    await runtime.close()
+
 
 @pytest.mark.asyncio
 async def test_register_receives_publish_with_construction(caplog: pytest.LogCaptureFixture) -> None:
@@ -106,6 +133,8 @@ async def test_register_receives_publish_with_construction(caplog: pytest.LogCap
 
     # Check if logger has the exception.
     assert any("Error constructing agent" in e.message for e in caplog.records)
+
+    await runtime.close()
 
 
 @pytest.mark.asyncio
@@ -137,6 +166,8 @@ async def test_register_receives_publish_cascade() -> None:
         agent = await runtime.try_get_underlying_agent_instance(AgentId(f"name{i}", "default"), CascadingAgent)
         assert agent.num_calls == total_num_calls_expected
 
+    await runtime.close()
+
 
 @pytest.mark.asyncio
 async def test_register_factory_explicit_name() -> None:
@@ -162,6 +193,8 @@ async def test_register_factory_explicit_name() -> None:
     )
     assert other_long_running_agent.num_calls == 0
 
+    await runtime.close()
+
 
 @pytest.mark.asyncio
 async def test_default_subscription() -> None:
@@ -184,6 +217,8 @@ async def test_default_subscription() -> None:
         AgentId("name", key="other"), type=LoopbackAgentWithDefaultSubscription
     )
     assert other_long_running_agent.num_calls == 0
+
+    await runtime.close()
 
 
 @pytest.mark.asyncio
@@ -208,6 +243,8 @@ async def test_type_subscription() -> None:
     )
     assert other_long_running_agent.num_calls == 0
 
+    await runtime.close()
+
 
 @pytest.mark.asyncio
 async def test_default_subscription_publish_to_other_source() -> None:
@@ -229,3 +266,5 @@ async def test_default_subscription_publish_to_other_source() -> None:
         AgentId("name", key="other"), type=LoopbackAgentWithDefaultSubscription
     )
     assert other_long_running_agent.num_calls == 1
+
+    await runtime.close()
