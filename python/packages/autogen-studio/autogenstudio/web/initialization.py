@@ -1,7 +1,6 @@
 # api/initialization.py
 import os
 from pathlib import Path
-from typing import Dict
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -74,7 +73,7 @@ class AppInitializer:
         """Load environment variables from .env file if it exists"""
         env_file = self.app_root / ".env"
         if env_file.exists():
-            logger.info(f"Loading environment variables from {env_file}")
+            # logger.info(f"Loading environment variables from {env_file}")
             load_dotenv(str(env_file))
 
     # Properties for accessing paths

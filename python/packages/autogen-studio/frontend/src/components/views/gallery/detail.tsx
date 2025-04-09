@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Tabs, Button, Tooltip, Drawer } from "antd";
+import React, { useState, useEffect } from "react";
+import { Tabs, Button, Tooltip, Drawer, Input } from "antd";
 import {
   Package,
   Users,
@@ -11,15 +11,18 @@ import {
   Edit,
   Copy,
   Trash,
+  Plus,
+  Download,
 } from "lucide-react";
-import { ComponentEditor } from "../team/builder/component-editor/component-editor";
+import { ComponentEditor } from "../teambuilder/builder/component-editor/component-editor";
 import { TruncatableText } from "../atoms";
-import type { Gallery } from "./types";
 import {
   Component,
   ComponentConfig,
   ComponentTypes,
+  Gallery,
 } from "../../types/datamodel";
+import TextArea from "antd/es/input/TextArea";
 
 type CategoryKey = `${ComponentTypes}s`;
 
@@ -34,8 +37,9 @@ const ComponentCard: React.FC<
   CardActions & {
     item: Component<ComponentConfig>;
     index: number;
+    allowDelete: boolean;
   }
-> = ({ item, onEdit, onDuplicate, onDelete, index }) => (
+> = ({ item, onEdit, onDuplicate, onDelete, index, allowDelete }) => (
   <div
     className="bg-secondary rounded overflow-hidden group h-full cursor-pointer"
     onClick={() => onEdit(item, index)}
@@ -45,16 +49,18 @@ const ComponentCard: React.FC<
         {item.provider}
       </div>
       <div className="flex gap-0">
-        <Button
-          title="Delete"
-          type="text"
-          className="h-6 w-6 flex items-center justify-center p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600"
-          icon={<Trash className="w-3.5 h-3.5" />}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(item, index);
-          }}
-        />
+        {allowDelete && (
+          <Button
+            title="Delete"
+            type="text"
+            className="h-6 w-6 flex items-center justify-center p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-600"
+            icon={<Trash className="w-3.5 h-3.5" />}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item, index);
+            }}
+          />
+        )}
         <Button
           title="Duplicate"
           type="text"
@@ -98,12 +104,15 @@ const ComponentGrid: React.FC<
   } & CardActions
 > = ({ items, title, ...actions }) => (
   <div>
-    <h3 className="text-base font-medium m-0 mb-4">
-      {items.length} {items.length === 1 ? title : `${title}s`}
-    </h3>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
       {items.map((item, idx) => (
-        <ComponentCard key={idx} item={item} index={idx} {...actions} />
+        <ComponentCard
+          key={idx}
+          item={item}
+          index={idx}
+          allowDelete={items.length > 1}
+          {...actions}
+        />
       ))}
     </div>
   </div>
@@ -117,17 +126,47 @@ const iconMap = {
   termination: Timer,
 } as const;
 
+// Add default configurations for each component type
+const defaultConfigs: Record<ComponentTypes, ComponentConfig> = {
+  team: { selector_prompt: "Default selector prompt", participants: [] } as any,
+  agent: { name: "New Agent", description: "" } as any,
+  model: { model: "gpt-3.5", api_key: "" } as any,
+  tool: {
+    source_code: "",
+    name: "New Tool",
+    description: "A new tool",
+    global_imports: [],
+    has_cancellation_support: false,
+  },
+  termination: { max_messages: 1 },
+};
+
 export const GalleryDetail: React.FC<{
   gallery: Gallery;
   onSave: (updates: Partial<Gallery>) => void;
   onDirtyStateChange: (isDirty: boolean) => void;
 }> = ({ gallery, onSave, onDirtyStateChange }) => {
+  if (!gallery.config.components) {
+    return <div className="text-secondary">No components found</div>;
+  }
   const [editingComponent, setEditingComponent] = useState<{
     component: Component<ComponentConfig>;
     category: CategoryKey;
     index: number;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<ComponentTypes>("team");
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [tempName, setTempName] = useState(gallery.config.name);
+  const [tempDescription, setTempDescription] = useState(
+    gallery.config.metadata.description
+  );
+
+  useEffect(() => {
+    setTempName(gallery.config.name);
+    setTempDescription(gallery.config.metadata.description);
+    setActiveTab("team");
+    setEditingComponent(null);
+  }, [gallery.id]);
 
   const updateGallery = (
     category: CategoryKey,
@@ -137,9 +176,12 @@ export const GalleryDetail: React.FC<{
   ) => {
     const updatedGallery = {
       ...gallery,
-      components: {
-        ...gallery.components,
-        [category]: updater(gallery.components[category]),
+      config: {
+        ...gallery.config,
+        components: {
+          ...gallery.config.components,
+          [category]: updater(gallery.config.components[category]),
+        },
       },
     };
     onSave(updatedGallery);
@@ -158,7 +200,7 @@ export const GalleryDetail: React.FC<{
     onDuplicate: (component: Component<ComponentConfig>, index: number) => {
       const category = `${activeTab}s` as CategoryKey;
       const baseLabel = component.label?.replace(/_\d+$/, "");
-      const components = gallery.components[category];
+      const components = gallery.config.components[category];
 
       const nextNumber =
         Math.max(
@@ -187,6 +229,41 @@ export const GalleryDetail: React.FC<{
     },
   };
 
+  const handleAdd = () => {
+    const category = `${activeTab}s` as CategoryKey;
+    const components = gallery.config.components[category];
+    let newComponent: Component<ComponentConfig>;
+    const newLabel = `New ${
+      activeTab.charAt(0).toUpperCase() + activeTab.slice(1)
+    }`;
+
+    if (components.length > 0) {
+      // Clone the entire component and just modify the label
+      newComponent = {
+        ...components[0], // This preserves all fields (provider, version, description, etc.)
+        label: newLabel,
+      };
+    } else {
+      // Only for empty categories, use default config
+      newComponent = {
+        provider: "new",
+        component_type: activeTab,
+        config: defaultConfigs[activeTab],
+        label: newLabel,
+      };
+    }
+
+    updateGallery(category, (components) => {
+      const newComponents = [...components, newComponent];
+      setEditingComponent({
+        component: newComponent,
+        category,
+        index: newComponents.length - 1,
+      });
+      return newComponents;
+    });
+  };
+
   const handleComponentUpdate = (
     updatedComponent: Component<ComponentConfig>
   ) => {
@@ -200,6 +277,38 @@ export const GalleryDetail: React.FC<{
     setEditingComponent(null);
   };
 
+  const handleDetailsSave = () => {
+    const updatedGallery = {
+      ...gallery,
+      config: {
+        ...gallery.config,
+        name: tempName,
+        metadata: {
+          ...gallery.config.metadata,
+          description: tempDescription,
+        },
+      },
+    };
+    onSave(updatedGallery);
+    onDirtyStateChange(true);
+    setIsEditingDetails(false);
+  };
+
+  const handleDownload = () => {
+    const dataStr = JSON.stringify(gallery, null, 2);
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${gallery.config.name
+      .toLowerCase()
+      .replace(/\s+/g, "_")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const tabItems = Object.entries(iconMap).map(([key, Icon]) => ({
     key,
     label: (
@@ -207,16 +316,36 @@ export const GalleryDetail: React.FC<{
         <Icon className="w-5 h-5" />
         {key.charAt(0).toUpperCase() + key.slice(1)}s
         <span className="text-xs font-light text-secondary">
-          ({gallery.components[`${key}s` as CategoryKey].length})
+          ({gallery.config.components[`${key}s` as CategoryKey].length})
         </span>
       </span>
     ),
     children: (
-      <ComponentGrid
-        items={gallery.components[`${key}s` as CategoryKey]}
-        title={key}
-        {...handlers}
-      />
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-base font-medium">
+            {gallery.config.components[`${key}s` as CategoryKey].length}{" "}
+            {gallery.config.components[`${key}s` as CategoryKey].length === 1
+              ? key.charAt(0).toUpperCase() + key.slice(1)
+              : key.charAt(0).toUpperCase() + key.slice(1) + "s"}
+          </h3>
+          <Button
+            type="primary"
+            icon={<Plus className="w-4 h-4" />}
+            onClick={() => {
+              setActiveTab(key as ComponentTypes);
+              handleAdd();
+            }}
+          >
+            {`Add ${key.charAt(0).toUpperCase() + key.slice(1)}`}
+          </Button>
+        </div>
+        <ComponentGrid
+          items={gallery.config.components[`${key}s` as CategoryKey]}
+          title={key}
+          {...handlers}
+        />
+      </div>
     ),
   }));
 
@@ -230,25 +359,74 @@ export const GalleryDetail: React.FC<{
         />
         <div className="relative z-10 p-6 h-full flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-medium text-primary">
-                {gallery.name}
-              </h1>
-              {gallery.url && (
-                <Tooltip title="Remote Gallery">
-                  <Globe className="w-5 h-5 text-secondary" />
-                </Tooltip>
-              )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {isEditingDetails ? (
+                  <Input
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    className="text-2xl font-medium bg-background/50 backdrop-blur px-2 py-1 rounded w-[400px]"
+                  />
+                ) : (
+                  <h1 className="text-2xl font-medium text-primary">
+                    {gallery.config.name}
+                  </h1>
+                )}
+                {gallery.config.url && (
+                  <Tooltip title="Remote Gallery">
+                    <Globe className="w-5 h-5 text-secondary" />
+                  </Tooltip>
+                )}
+              </div>
             </div>
-            <p className="text-secondary w-1/2 mt-2 line-clamp-2">
-              {gallery.metadata.description}
-            </p>
+            {isEditingDetails ? (
+              <TextArea
+                value={tempDescription}
+                onChange={(e) => setTempDescription(e.target.value)}
+                className="w-1/2 bg-background/50 backdrop-blur px-2 py-1 rounded mt-2"
+                rows={2}
+              />
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-secondary w-1/2 mt-2 line-clamp-2">
+                  {gallery.config.metadata.description}
+                </p>
+                <div className="flex gap-0">
+                  <Tooltip title="Edit Gallery">
+                    <Button
+                      icon={<Edit className="w-4 h-4" />}
+                      onClick={() => setIsEditingDetails(true)}
+                      type="text"
+                      className="text-white hover:text-white/80"
+                    />
+                  </Tooltip>
+                  <Tooltip title="Download Gallery">
+                    <Button
+                      icon={<Download className="w-4 h-4" />}
+                      onClick={handleDownload}
+                      type="text"
+                      className="text-white hover:text-white/80"
+                    />
+                  </Tooltip>
+                </div>
+              </div>
+            )}
+            {isEditingDetails && (
+              <div className="flex gap-2 mt-2">
+                <Button onClick={() => setIsEditingDetails(false)}>
+                  Cancel
+                </Button>
+                <Button type="primary" onClick={handleDetailsSave}>
+                  Save
+                </Button>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <div className="bg-tertiary backdrop-blur rounded p-2 flex items-center gap-2">
               <Package className="w-4 h-4 text-secondary" />
               <span className="text-sm">
-                {Object.values(gallery.components).reduce(
+                {Object.values(gallery.config.components).reduce(
                   (sum, arr) => sum + arr.length,
                   0
                 )}{" "}
@@ -256,7 +434,7 @@ export const GalleryDetail: React.FC<{
               </span>
             </div>
             <div className="bg-tertiary backdrop-blur rounded p-2 text-sm">
-              v{gallery.metadata.version}
+              v{gallery.config.metadata.version}
             </div>
           </div>
         </div>

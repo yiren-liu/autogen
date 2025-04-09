@@ -1,16 +1,21 @@
+import os
 from datetime import datetime
 from typing import List, Optional
 
+import anthropic
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_agentchat.conditions import MaxMessageTermination, TextMentionTermination
 from autogen_agentchat.teams import RoundRobinGroupChat, SelectorGroupChat
 from autogen_core import ComponentModel
 from autogen_core.models import ModelInfo
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
+from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
+from autogen_ext.models.anthropic import AnthropicChatCompletionClient
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.models.openai._openai_client import AzureOpenAIChatCompletionClient
+from autogen_ext.tools.code_execution import PythonCodeExecutionTool
 
-from autogenstudio.datamodel import Gallery, GalleryComponents, GalleryMetadata
+from autogenstudio.datamodel import GalleryComponents, GalleryConfig, GalleryMetadata
 
 from . import tools as tools
 
@@ -31,8 +36,6 @@ class GalleryBuilder:
         # Default metadata
         self.metadata = GalleryMetadata(
             author="AutoGen Team",
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
             version="1.0.0",
             description="",
             tags=[],
@@ -109,12 +112,12 @@ class GalleryBuilder:
         self.terminations.append(self._update_component_metadata(termination, label, description))
         return self
 
-    def build(self) -> Gallery:
+    def build(self) -> GalleryConfig:
         """Build and return the complete gallery."""
         # Update timestamps
-        self.metadata.updated_at = datetime.now()
+        # self.metadata.updated_at = datetime.now()
 
-        return Gallery(
+        return GalleryConfig(
             id=self.id,
             name=self.name,
             url=self.url,
@@ -129,8 +132,14 @@ class GalleryBuilder:
         )
 
 
-def create_default_gallery() -> Gallery:
+def create_default_gallery() -> GalleryConfig:
     """Create a default gallery with all components including calculator and web surfer teams."""
+
+    # model clients require API keys to be set in the environment or passed in
+    # as arguments. For testing purposes, we set them to "test" if not already set.
+    for key in ["OPENAI_API_KEY", "AZURE_OPENAI_API_KEY", "ANTHROPIC_API_KEY"]:
+        if not os.environ.get(key):
+            os.environ[key] = "test"
 
     # url = "https://raw.githubusercontent.com/microsoft/autogen/refs/heads/main/python/packages/autogen-studio/autogenstudio/gallery/default.json"
     builder = GalleryBuilder(id="gallery_default", name="Default Component Gallery")
@@ -149,12 +158,21 @@ def create_default_gallery() -> Gallery:
     mistral_vllm_model = OpenAIChatCompletionClient(
         model="TheBloke/Mistral-7B-Instruct-v0.2-GGUF",
         base_url="http://localhost:1234/v1",
-        model_info=ModelInfo(vision=False, function_calling=True, json_output=False, family="unknown"),
+        model_info=ModelInfo(
+            vision=False, function_calling=True, json_output=False, family="unknown", structured_output=False
+        ),
     )
     builder.add_model(
         mistral_vllm_model.dump_component(),
         label="Mistral-7B Local",
         description="Local Mistral-7B model client for instruction-based generation (Ollama, LMStudio).",
+    )
+
+    anthropic_model = AnthropicChatCompletionClient(model="claude-3-7-sonnet-20250219")
+    builder.add_model(
+        anthropic_model.dump_component(),
+        label="Anthropic Claude-3-7",
+        description="Anthropic Claude-3 model client.",
     )
 
     # create an azure mode
@@ -163,7 +181,7 @@ def create_default_gallery() -> Gallery:
         model="gpt-4o-mini",
         api_version="2024-06-01",
         azure_endpoint="https://{your-custom-endpoint}.openai.azure.com/",
-        api_key="sk-...",  # For key-based authentication.
+        api_key="test",
     )
     builder.add_model(
         az_model_client.dump_component(),
@@ -293,12 +311,6 @@ Read the above conversation. Then select the next role from {participants} to pl
     )
 
     builder.add_tool(
-        tools.generate_pdf_tool.dump_component(),
-        label="PDF Generation Tool",
-        description="A tool that generates a PDF file from a list of images.Requires the PyFPDF and pillow library to function.",
-    )
-
-    builder.add_tool(
         tools.fetch_webpage_tool.dump_component(),
         label="Fetch Webpage Tool",
         description="A tool that fetches the content of a webpage and converts it to markdown. Requires the requests and beautifulsoup4 library to function.",
@@ -314,6 +326,14 @@ Read the above conversation. Then select the next role from {participants} to pl
         tools.google_search_tool.dump_component(),
         label="Google Search Tool",
         description="A tool that performs Google searches using the Google Custom Search API. Requires the requests library, [GOOGLE_API_KEY, GOOGLE_CSE_ID] to be set,  env variable to function.",
+    )
+
+    code_executor = LocalCommandLineCodeExecutor(work_dir=".coding", timeout=360)
+    code_execution_tool = PythonCodeExecutionTool(code_executor)
+    builder.add_tool(
+        code_execution_tool.dump_component(),
+        label="Python Code Execution Tool",
+        description="A tool that executes Python code in a local environment.",
     )
 
     # Create deep research agent
@@ -353,7 +373,7 @@ Read the above conversation. Then select the next role from {participants} to pl
         name="summary_agent",
         description="A summary agent that provides a detailed markdown summary of the research as a report to the user.",
         model_client=model_client,
-        system_message="""You are a summary agent. Your role is to provide a detailed markdown summary of the research as a report to the user. Your report should have a reasonable title that matches the research question and should summarize the key details in the results found in natural an actionable manner. The main results/answer should be in the first paragraph.
+        system_message="""You are a summary agent. Your role is to provide a detailed markdown summary of the research as a report to the user. Your report should have a reasonable title that matches the research question and should summarize the key details in the results found in natural an actionable manner. The main results/answer should be in the first paragraph. Where reasonable, your report should have clear comparison tables that drive critical insights. Most importantly, you should have a reference section and cite the key sources (where available) for facts obtained INSIDE THE MAIN REPORT. Also, where appropriate, you may add images if available that illustrate concepts needed for the summary.
         Your report should end with the word "TERMINATE" to signal the end of the conversation.""",
     )
 

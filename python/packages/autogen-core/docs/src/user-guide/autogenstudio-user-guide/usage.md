@@ -50,7 +50,7 @@ AGS also lets you directly modify the JSON configuration of the team. This can b
 
 > Did you know that you define your agents in Python, export them to JSON and then paste them in the JSON editor? The section below shows how to accomplish this.
 
-## Declarative Specification of Componenents
+## Declarative Specification of Components
 
 AutoGen Studio is built on the declarative specification behaviors of AutoGen AgentChat. This allows users to define teams, agents, models, tools, and termination conditions in Python and then dump them into a JSON file for use in AutoGen Studio.
 
@@ -139,6 +139,17 @@ This example shows a team with a single agent, using the `RoundRobinGroupChat` t
 To understand the full configuration of an model clients, you can refer to the [AutoGen Model Clients documentation](https://microsoft.github.io/autogen/dev/user-guide/core-user-guide/components/model-clients.html).
 
 Note that you can similarly define your model client in Python and call `dump_component()` on it to get the JSON configuration and use it to update the model client section of your team or agent configuration.
+
+Finally, you can use the `load_component()` method to load a team configuration from a JSON file:
+
+```python
+
+import json
+from autogen_agentchat.teams import BaseGroupChat
+team_config = json.load(open("team.json"))
+team = BaseGroupChat.load_component(team_config)
+
+```
 
 ## Gallery - Sharing and Reusing Components
 
