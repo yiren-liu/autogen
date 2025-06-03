@@ -60,6 +60,12 @@ const navigation: INavItem[] = [
     icon: Rocket,
     breadcrumbs: [{ name: "Deploy", href: "/deploy", current: true }],
   },
+  {
+    name: "Eval",
+    href: "/eval",
+    icon: Beaker,
+    breadcrumbs: [{ name: "Eval", href: "/eval", current: true }],
+  },
 ];
 
 const classNames = (...classes: (string | undefined | boolean)[]) => {

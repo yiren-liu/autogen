@@ -1,6 +1,7 @@
 // Base Component System
 
 export type ComponentTypes =
+  | "graph"
   | "team"
   | "agent"
   | "model"
@@ -146,7 +147,30 @@ export interface FunctionToolConfig {
   has_cancellation_support: boolean;
 }
 
+
+
+
 // Provider-based Configs
+export interface DiGraphEdge {
+  target: string;
+  condition?: string;
+}
+export interface DiGraphNode {
+  name: string;
+  edges: DiGraphEdge[];
+  activation: "all" | "any";
+}
+export interface DiGraph {
+  nodes: Record<string, DiGraphNode>;
+  default_start_node?: string;
+}
+export interface GraphConfig {
+  participants: Component<AgentConfig>[];
+  termination_condition?: Component<TerminationConfig>;
+  max_turns?: number;
+  graph: DiGraph;
+}
+
 export interface SelectorGroupChatConfig {
   participants: Component<AgentConfig>[];
   model_client: Component<ModelConfig>;
@@ -307,6 +331,7 @@ export type TerminationConfig =
   | TextMentionTerminationConfig;
 
 export type ComponentConfig =
+  | GraphConfig
   | TeamConfig
   | AgentConfig
   | ModelConfig

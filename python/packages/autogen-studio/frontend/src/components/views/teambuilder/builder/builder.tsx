@@ -272,6 +272,7 @@ export const TeamBuilder: React.FC<TeamBuilderProps> = ({
       agent: ["team"],
       team: [],
       termination: ["team"],
+      graph: [],
     };
     return validTargets[draggedType]?.includes(targetType) || false;
   };
