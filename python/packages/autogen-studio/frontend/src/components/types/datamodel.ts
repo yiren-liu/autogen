@@ -358,6 +358,10 @@ export interface Team extends DBModel {
   component: Component<TeamConfig>;
 }
 
+export interface Graph extends DBModel {
+  component: Component<GraphConfig>;
+}
+
 export interface Session extends DBModel {
   name: string;
   team_id?: number;

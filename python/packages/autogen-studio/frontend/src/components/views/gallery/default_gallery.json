@@ -1082,6 +1082,80 @@
           "max_selector_attempts": 3
         }
       }
+    ],
+    "graphs": [
+      {
+        "provider": "autogen_agentchat.graphs.GraphChat",
+        "component_type": "graph",
+        "version": 1,
+        "component_version": 1,
+        "description": "A simple graph with an assistant agent and termination condition",
+        "label": "Simple Graph",
+        "config": {
+          "participants": [
+            {
+              "provider": "autogen_agentchat.agents.AssistantAgent",
+              "component_type": "agent",
+              "version": 1,
+              "component_version": 1,
+              "description": "An agent that provides assistance with ability to use tools.",
+              "label": "AssistantAgent",
+              "config": {
+                "name": "assistant_agent",
+                "model_client": {
+                  "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                  "component_type": "model",
+                  "version": 1,
+                  "component_version": 1,
+                  "description": "Chat completion client for OpenAI hosted models.",
+                  "label": "OpenAIChatCompletionClient",
+                  "config": {
+                    "model": "gpt-4o-mini"
+                  }
+                },
+                "tools": [],
+                "handoffs": [],
+                "model_context": {
+                  "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                  "component_type": "chat_completion_context",
+                  "version": 1,
+                  "component_version": 1,
+                  "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                  "label": "UnboundedChatCompletionContext",
+                  "config": {}
+                },
+                "description": "An agent that provides assistance with ability to use tools.",
+                "system_message": "You are a helpful assistant. Solve tasks carefully. When done, say TERMINATE.",
+                "model_client_stream": false,
+                "reflect_on_tool_use": false,
+                "tool_call_summary_format": "{result}"
+              }
+            }
+          ],
+          "termination_condition": {
+            "provider": "autogen_agentchat.conditions.TextMentionTermination",
+            "component_type": "termination",
+            "version": 1,
+            "component_version": 1,
+            "description": "Terminate the conversation if a specific text is mentioned.",
+            "label": "TextMentionTermination",
+            "config": {
+              "text": "TERMINATE"
+            }
+          },
+          "max_turns": 10,
+          "graph": {
+            "nodes": {
+              "assistant_agent": {
+                "name": "assistant_agent",
+                "edges": [],
+                "activation": "all"
+              }
+            },
+            "default_start_node": "assistant_agent"
+          }
+        }
+      }
     ]
   }
 }

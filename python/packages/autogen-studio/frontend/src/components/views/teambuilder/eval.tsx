@@ -2,18 +2,18 @@ import React, { useCallback, useEffect, useState, useContext } from "react";
 import { message, Modal } from "antd";
 import { ChevronRight } from "lucide-react";
 import { appContext } from "../../../hooks/provider";
-import { teamAPI } from "./api";
-import { TeamSidebar } from "./sidebar";
-import { Gallery, type Team } from "../../types/datamodel";
-import { TeamBuilder } from "./builder/builder";
+import { graphAPI } from "./api";
+import { GraphSidebar } from "./graph-builder/sidebar";
+import { Gallery, type Graph } from "../../types/datamodel";
+import { GraphBuilder } from "./graph-builder/graphbuilder";
 
 export const EvalScope: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [currentTeam, setCurrentTeam] = useState<Team | null>(null);
+  const [graphs, setGraphs] = useState<Graph[]>([]);
+  const [currentGraph, setCurrentGraph] = useState<Graph | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("teamSidebar");
+      const stored = localStorage.getItem("graphSidebar");
       return stored !== null ? JSON.parse(stored) : true;
     }
   });
@@ -27,43 +27,43 @@ export const EvalScope: React.FC = () => {
   // Persist sidebar state
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("teamSidebar", JSON.stringify(isSidebarOpen));
+      localStorage.setItem("graphSidebar", JSON.stringify(isSidebarOpen));
     }
   }, [isSidebarOpen]);
 
-  const fetchTeams = useCallback(async () => {
+  const fetchGraphs = useCallback(async () => {
     if (!user?.id) return;
 
     try {
       setIsLoading(true);
-      const data = await teamAPI.listTeams(user.id);
-      setTeams(data);
-      if (!currentTeam && data.length > 0) {
-        setCurrentTeam(data[0]);
+      const data = await graphAPI.listGraphs(user.id);
+      setGraphs(data);
+      if (!currentGraph && data.length > 0) {
+        setCurrentGraph(data[0]);
       }
     } catch (error) {
-      console.error("Error fetching teams:", error);
+      console.error("Error fetching graphs:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, currentTeam]);
+  }, [user?.id, currentGraph]);
 
   useEffect(() => {
-    fetchTeams();
-  }, [fetchTeams]);
+    fetchGraphs();
+  }, [fetchGraphs]);
 
   // Handle URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const teamId = params.get("teamId");
+    const graphId = params.get("graphId");
 
-    if (teamId && !currentTeam) {
-      handleSelectTeam({ id: parseInt(teamId) } as Team);
+    if (graphId && !currentGraph) {
+      handleSelectGraph({ id: parseInt(graphId) } as Graph);
     }
   }, []);
 
-  const handleSelectTeam = async (selectedTeam: Team) => {
-    if (!user?.id || !selectedTeam.id) return;
+  const handleSelectGraph = async (selectedGraph: Graph) => {
+    if (!user?.id || !selectedGraph.id) return;
 
     if (hasUnsavedChanges) {
       Modal.confirm({
@@ -72,73 +72,73 @@ export const EvalScope: React.FC = () => {
         okText: "Discard",
         cancelText: "Go Back",
         onOk: () => {
-          switchToTeam(selectedTeam.id);
+          switchToGraph(selectedGraph.id);
         },
       });
     } else {
-      await switchToTeam(selectedTeam.id);
+      await switchToGraph(selectedGraph.id);
     }
   };
 
-  const switchToTeam = async (teamId: number | undefined) => {
-    if (!teamId || !user?.id) return;
+  const switchToGraph = async (graphId: number | undefined) => {
+    if (!graphId || !user?.id) return;
     setIsLoading(true);
     try {
-      const data = await teamAPI.getTeam(teamId, user.id!);
-      setCurrentTeam(data);
-      window.history.pushState({}, "", `?teamId=${teamId}`);
+      const data = await graphAPI.getGraph(graphId, user.id!);
+      setCurrentGraph(data);
+      window.history.pushState({}, "", `?graphId=${graphId}`);
     } catch (error) {
-      console.error("Error loading team:", error);
-      messageApi.error("Failed to load team");
+      console.error("Error loading graph:", error);
+      messageApi.error("Failed to load graph");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDeleteTeam = async (teamId: number) => {
+  const handleDeleteGraph = async (graphId: number) => {
     if (!user?.id) return;
 
     try {
-      await teamAPI.deleteTeam(teamId, user.id);
-      setTeams(teams.filter((t) => t.id !== teamId));
-      if (currentTeam?.id === teamId) {
-        setCurrentTeam(null);
+      await graphAPI.deleteGraph(graphId, user.id);
+      setGraphs(graphs.filter((g) => g.id !== graphId));
+      if (currentGraph?.id === graphId) {
+        setCurrentGraph(null);
       }
-      messageApi.success("Team deleted");
+      messageApi.success("Graph deleted");
     } catch (error) {
-      console.error("Error deleting team:", error);
-      messageApi.error("Error deleting team");
+      console.error("Error deleting graph:", error);
+      messageApi.error("Error deleting graph");
     }
   };
 
-  const handleCreateTeam = (newTeam: Team) => {
-    setCurrentTeam(newTeam);
-    handleSaveTeam(newTeam);
+  const handleCreateGraph = (newGraph: Graph) => {
+    setCurrentGraph(newGraph);
+    handleSaveGraph(newGraph);
   };
 
-  const handleSaveTeam = async (teamData: Partial<Team>) => {
+  const handleSaveGraph = async (graphData: Partial<Graph>) => {
     if (!user?.id) return;
 
     try {
-      const sanitizedTeamData = {
-        ...teamData,
+      const sanitizedGraphData = {
+        ...graphData,
         created_at: undefined,
         updated_at: undefined,
       };
 
-      const savedTeam = await teamAPI.createTeam(sanitizedTeamData, user.id);
+      const savedGraph = await graphAPI.createGraph(sanitizedGraphData, user.id);
       messageApi.success(
-        `Team ${teamData.id ? "updated" : "created"} successfully`
+        `Graph ${graphData.id ? "updated" : "created"} successfully`
       );
 
-      if (teamData.id) {
-        setTeams(teams.map((t) => (t.id === savedTeam.id ? savedTeam : t)));
-        if (currentTeam?.id === savedTeam.id) {
-          setCurrentTeam(savedTeam);
+      if (graphData.id) {
+        setGraphs(graphs.map((g) => (g.id === savedGraph.id ? savedGraph : g)));
+        if (currentGraph?.id === savedGraph.id) {
+          setCurrentGraph(savedGraph);
         }
       } else {
-        setTeams([savedTeam, ...teams]);
-        setCurrentTeam(savedTeam);
+        setGraphs([savedGraph, ...graphs]);
+        setCurrentGraph(savedGraph);
       }
     } catch (error) {
       throw error;
@@ -154,15 +154,15 @@ export const EvalScope: React.FC = () => {
           isSidebarOpen ? "w-64" : "w-12"
         }`}
       >
-        <TeamSidebar
+        <GraphSidebar
           isOpen={isSidebarOpen}
-          teams={teams}
-          currentTeam={currentTeam}
+          graphs={graphs}
+          currentGraph={currentGraph}
           onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-          onSelectTeam={handleSelectTeam}
-          onCreateTeam={handleCreateTeam}
-          onEditTeam={setCurrentTeam}
-          onDeleteTeam={handleDeleteTeam}
+          onSelectGraph={handleSelectGraph}
+          onCreateGraph={handleCreateGraph}
+          onEditGraph={setCurrentGraph}
+          onDeleteGraph={handleDeleteGraph}
           isLoading={isLoading}
           setSelectedGallery={setSelectedGallery}
           selectedGallery={selectedGallery}
@@ -178,13 +178,13 @@ export const EvalScope: React.FC = () => {
         <div className="p-4 pt-2">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 mb-4 text-sm">
-            <span className="text-primary font-medium">Teams</span>
-            {currentTeam && (
+            <span className="text-primary font-medium">Graphs</span>
+            {currentGraph && (
               <>
                 <ChevronRight className="w-4 h-4 text-secondary" />
                 <span className="text-secondary">
-                  {currentTeam.component?.label}
-                  {currentTeam.id ? (
+                  {currentGraph.component?.label}
+                  {currentGraph.id ? (
                     ""
                   ) : (
                     <span className="text-xs text-orange-500"> (New)</span>
@@ -195,16 +195,16 @@ export const EvalScope: React.FC = () => {
           </div>
 
           {/* Content Area */}
-          {currentTeam ? (
-            <TeamBuilder
-              team={currentTeam}
-              onChange={handleSaveTeam}
+          {currentGraph ? (
+            <GraphBuilder
+              graph={currentGraph}
+              onChange={handleSaveGraph}
               onDirtyStateChange={setHasUnsavedChanges}
               selectedGallery={selectedGallery}
             />
           ) : (
             <div className="flex items-center justify-center h-[calc(100vh-190px)] text-secondary">
-              Select a team from the sidebar or create a new one
+              Select a graph from the sidebar or create a new one
             </div>
           )}
         </div>

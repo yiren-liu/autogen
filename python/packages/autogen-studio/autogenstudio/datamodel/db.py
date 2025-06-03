@@ -53,6 +53,11 @@ class Team(BaseDBModel, table=True):
     component: Union[ComponentModel, dict] = Field(sa_column=Column(JSON))
 
 
+class Graph(BaseDBModel, table=True):
+    __table_args__ = {"sqlite_autoincrement": True}
+    component: Union[ComponentModel, dict] = Field(sa_column=Column(JSON))
+
+
 class Message(BaseDBModel, table=True):
     __table_args__ = {"sqlite_autoincrement": True}
 

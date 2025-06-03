@@ -1,4 +1,4 @@
-import { Team, Component, ComponentConfig } from "../../types/datamodel";
+import { Team, Graph, Component, ComponentConfig } from "../../types/datamodel";
 import { BaseAPI } from "../../utils/baseapi";
 import { getServerUrl } from "../../utils/utils";
 
@@ -122,3 +122,59 @@ export class ValidationAPI extends BaseAPI {
 export const validationAPI = new ValidationAPI();
 
 export const teamAPI = new TeamAPI();
+
+export class GraphAPI extends BaseAPI {
+  async listGraphs(userId: string): Promise<Graph[]> {
+    const response = await fetch(
+      `${this.getBaseUrl()}/graphs/?user_id=${userId}`,
+      {
+        headers: this.getHeaders(),
+      }
+    );
+    const data = await response.json();
+    if (!data.status) throw new Error(data.message || "Failed to fetch graphs");
+    return data.data;
+  }
+
+  async getGraph(graphId: number, userId: string): Promise<Graph> {
+    const response = await fetch(
+      `${this.getBaseUrl()}/graphs/${graphId}?user_id=${userId}`,
+      {
+        headers: this.getHeaders(),
+      }
+    );
+    const data = await response.json();
+    if (!data.status) throw new Error(data.message || "Failed to fetch graph");
+    return data.data;
+  }
+
+  async createGraph(graphData: Partial<Graph>, userId: string): Promise<Graph> {
+    const graph = {
+      ...graphData,
+      user_id: userId,
+    };
+
+    const response = await fetch(`${this.getBaseUrl()}/graphs/`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(graph),
+    });
+    const data = await response.json();
+    if (!data.status) throw new Error(data.message || "Failed to create graph");
+    return data.data;
+  }
+
+  async deleteGraph(graphId: number, userId: string): Promise<void> {
+    const response = await fetch(
+      `${this.getBaseUrl()}/graphs/${graphId}?user_id=${userId}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(),
+      }
+    );
+    const data = await response.json();
+    if (!data.status) throw new Error(data.message || "Failed to delete graph");
+  }
+}
+
+export const graphAPI = new GraphAPI();

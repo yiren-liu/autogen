@@ -70,6 +70,7 @@ class GalleryComponents(BaseModel):
     tools: List[ComponentModel]
     terminations: List[ComponentModel]
     teams: List[ComponentModel]
+    graphs: List[ComponentModel] = []
 
 
 class GalleryConfig(BaseModel):

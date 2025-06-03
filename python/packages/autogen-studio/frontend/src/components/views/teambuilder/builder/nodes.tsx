@@ -448,6 +448,7 @@ export const nodeTypes = {
 };
 
 const EDGE_STYLES = {
+  "graph-connection": { stroke: "rgb(220,220,220)" },
   "model-connection": { stroke: "rgb(220,220,220)" },
   "tool-connection": { stroke: "rgb(220,220,220)" },
   "agent-connection": { stroke: "rgb(220,220,220)" },
@@ -493,6 +494,7 @@ export const CustomEdge = ({
 };
 
 export const edgeTypes = {
+  "graph-connection": CustomEdge,
   "model-connection": CustomEdge,
   "tool-connection": CustomEdge,
   "agent-connection": CustomEdge,

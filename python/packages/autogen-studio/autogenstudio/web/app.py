@@ -15,7 +15,7 @@ from .auth.middleware import AuthMiddleware
 from .config import settings
 from .deps import cleanup_managers, init_auth_manager, init_managers, register_auth_dependencies
 from .initialization import AppInitializer
-from .routes import gallery, runs, sessions, settingsroute, teams, validation, ws
+from .routes import gallery, runs, sessions, settingsroute, teams, graphs, validation, ws
 
 # Initialize application
 app_file_path = os.path.dirname(os.path.abspath(__file__))
@@ -105,6 +105,12 @@ api.include_router(
     responses={404: {"description": "Not found"}},
 )
 
+api.include_router(
+    graphs.router,
+    prefix="/graphs",
+    tags=["graphs"],
+    responses={404: {"description": "Not found"}},
+)
 
 api.include_router(
     ws.router,

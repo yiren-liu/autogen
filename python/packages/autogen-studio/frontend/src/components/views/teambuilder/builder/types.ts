@@ -21,6 +21,7 @@ export type CustomNode = Node<NodeData>;
 // export type CustomEdge = Edge;
 
 export type EdgeTypes =
+  | "graph-connection"
   | "model-connection"
   | "tool-connection"
   | "agent-connection"

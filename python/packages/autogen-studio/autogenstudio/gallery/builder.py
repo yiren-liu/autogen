@@ -28,6 +28,7 @@ class GalleryBuilder:
         self.name = name
         self.url: Optional[str] = url
         self.teams: List[ComponentModel] = []
+        self.graphs: List[ComponentModel] = []
         self.agents: List[ComponentModel] = []
         self.models: List[ComponentModel] = []
         self.tools: List[ComponentModel] = []
@@ -84,6 +85,13 @@ class GalleryBuilder:
         self.teams.append(self._update_component_metadata(team, label, description))
         return self
 
+    def add_graph(
+        self, graph: ComponentModel, label: Optional[str] = None, description: Optional[str] = None
+    ) -> "GalleryBuilder":
+        """Add a graph component to the gallery with optional custom label and description."""
+        self.graphs.append(self._update_component_metadata(graph, label, description))
+        return self
+
     def add_agent(
         self, agent: ComponentModel, label: Optional[str] = None, description: Optional[str] = None
     ) -> "GalleryBuilder":
@@ -124,6 +132,7 @@ class GalleryBuilder:
             metadata=self.metadata,
             components=GalleryComponents(
                 teams=self.teams,
+                graphs=self.graphs,
                 agents=self.agents,
                 models=self.models,
                 tools=self.tools,
