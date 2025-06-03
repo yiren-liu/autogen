@@ -25,3 +25,10 @@
 - Use consistent breadcrumb navigation
 - Preserve same toolbar functionality (save, validate, run, etc.)
 - Support both visual and JSON editing modes
+
+## Design System Integration
+- Adobe Spectrum Provider integrated at layout level with automatic dark/light theme switching
+- Ant Design ConfigProvider coexists for AntD components
+- Both design systems respect the global darkMode context
+- Adobe Spectrum components available throughout the application without additional setup
+- When developing the GraphBuilder, use Adobe Specturm components as much as possible

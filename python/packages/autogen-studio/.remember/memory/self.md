@@ -57,3 +57,53 @@ graph-builder/
 - Fixed component config type errors in store by using `(config as any)?.name`
 - Handled union types properly when accessing agent name properties
 - Used type assertions for ComponentConfig access patterns
+
+## Adobe Spectrum Overhaul
+
+### Component Replacements Made
+**GraphBuilder (graphbuilder.tsx):**
+- Replaced `Button`, `Switch`, `Tooltip`, `Layout`, `message` from Ant Design
+- Used `Button`, `Switch`, `TooltipTrigger`, `Tooltip`, `Flex`, `View`, `AlertDialog`, `ActionButton` from Adobe Spectrum
+- Replaced message notifications with error state management
+- Used `DialogTrigger` pattern for error alerts
+
+**Toolbar (toolbar.tsx):**
+- Replaced Ant Design `Button` and `Tooltip` components
+- Used Adobe Spectrum `ActionButton`, `TooltipTrigger`, `Tooltip`, `Flex`, `View`
+- Maintained same functionality with Adobe Spectrum interaction patterns
+
+**Sidebar (sidebar.tsx):**
+- Replaced Ant Design `Button`, `Input`, `Modal`, `message` components
+- Used Adobe Spectrum `ActionButton`, `SearchField`, `DialogTrigger`, `Dialog`, `AlertDialog`, `TextField`
+- Replaced Modal.confirm with `AlertDialog` component
+- Used proper Adobe Spectrum color values (`gray-50`, `blue-400`, `gray-400`)
+
+**TestDrawer (testdrawer.tsx):**
+- Replaced Ant Design `Drawer`, `Button`, `message`, `Checkbox`
+- Used Adobe Spectrum `DialogTrigger`, `Dialog`, `Button`, `Checkbox`, `AlertDialog`
+- Converted drawer pattern to dialog pattern with proper sizing
+
+### Color Value Corrections
+- `backgroundColor="gray-25"` → `backgroundColor="gray-50"`
+- `borderColor="gray"` → `borderColor="gray-400"`
+- `backgroundColor="blue-100"` → `backgroundColor="blue-400"`
+
+### Event Handling Updates
+- `onClick` → `onPress` for Adobe Spectrum components
+- Ant Design `onChange` patterns → Adobe Spectrum controlled component patterns
+- `stopPropagation()` removed as not available in Adobe Spectrum PressEvent
+
+### Component Structure Changes
+- Replaced div-based layouts with Adobe Spectrum `View` and `Flex` components
+- Used Adobe Spectrum sizing tokens (`size-100`, `size-150`, `size-200`)
+- Applied `UNSAFE_className` for custom CSS when needed
+
+### Accessibility Improvements
+- Adobe Spectrum components provide built-in accessibility features
+- Proper ARIA labels and keyboard navigation support
+- Screen reader compatibility out of the box
+
+### Known Issues
+- GalleryManager component props interface required TypeScript casting workaround
+- Some complex custom styling may require `UNSAFE_className` usage
+- Adobe Spectrum components have different event signatures than Ant Design
