@@ -30,7 +30,8 @@
 	// Performance optimizations for Windows
 	"mounts": [
 	"source=node_modules,target=/workspace/frontend/node_modules,type=volume",
-	"source=yarn-cache,target=/usr/local/share/.cache/yarn,type=volume"
+	"source=yarn-cache,target=/usr/local/share/.cache/yarn,type=volume",
+	"source=${localWorkspaceFolder}/.autogenstudio-data,target=/home/vscode/.autogenstudio,type=bind"
 	],
 	// Add workspaceMount for better performance
 	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
