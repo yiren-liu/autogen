@@ -20,7 +20,17 @@ import {
   MiniMap,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Button, Drawer, Layout, message, Switch, Tooltip } from "antd";
+import { 
+  Button, 
+  Switch, 
+  TooltipTrigger, 
+  Tooltip, 
+  Flex, 
+  View,
+  AlertDialog,
+  DialogTrigger,
+  ActionButton
+} from "@adobe/react-spectrum";
 import {
   Cable,
   CheckCircle,
@@ -46,8 +56,6 @@ import TestDrawer from "./testdrawer";
 import { validationAPI, ValidationResponse } from "../api";
 import { ValidationErrors } from "../builder/validationerrors";
 import ComponentEditor from "../builder/component-editor/component-editor";
-
-const { Sider, Content } = Layout;
 
 interface DragItemData {
   type: ComponentTypes;
@@ -77,7 +85,6 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
   const [showGrid, setShowGrid] = useState(true);
   const [showMiniMap, setShowMiniMap] = useState(true);
   const editorRef = useRef(null);
-  const [messageApi, contextHolder] = message.useMessage();
   const [activeDragItem, setActiveDragItem] = useState<DragItemData | null>(
     null
   );
@@ -86,6 +93,7 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
 
   const [validationLoading, setValidationLoading] = useState(false);
   const [testDrawerVisible, setTestDrawerVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
     undo,
@@ -194,7 +202,7 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
       setValidationResults(validationResult);
     } catch (error) {
       console.error("Validation error:", error);
-      messageApi.error("Validation failed");
+      setErrorMessage("Validation failed");
     } finally {
       setValidationLoading(false);
     }
@@ -221,7 +229,7 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
         resetHistory();
       }
     } catch (error) {
-      messageApi.error(
+      setErrorMessage(
         error instanceof Error
           ? error.message
           : "Failed to save graph configuration"
@@ -330,44 +338,34 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
   };
 
   return (
-    <div>
-      {contextHolder}
-
-      <div className="flex gap-2 text-xs rounded border-dashed border p-2 mb-2 items-center">
-        <div className="flex-1">
+    <View>
+      <Flex 
+        direction="row" 
+        gap="size-100" 
+        alignItems="center" 
+        justifyContent="space-between"
+        UNSAFE_className="text-xs rounded border-dashed border p-2 mb-2"
+      >
+        <Flex direction="row" alignItems="center" gap="size-100">
           <Switch
-            onChange={() => {
-              setIsJsonMode(!isJsonMode);
-            }}
-            className="mr-2"
-            defaultChecked={!isJsonMode}
-            checkedChildren={
-              <div className=" text-xs">
-                <Cable className="w-3 h-3 inline-block mt-1 mr-1" />
-              </div>
-            }
-            unCheckedChildren={
-              <div className=" text-xs">
-                <Code2 className="w-3 h-3 mt-1 inline-block mr-1" />
-              </div>
-            }
-          />
-          {isJsonMode ? "View JSON" : <>Visual Builder</>}{" "}
-        </div>
+            isSelected={!isJsonMode}
+            onChange={(isSelected) => setIsJsonMode(!isSelected)}
+            aria-label="Toggle view mode"
+          >
+            {isJsonMode ? "View JSON" : "Visual Builder"}
+          </Switch>
+        </Flex>
 
-        <div className="flex items-center">
+        <Flex direction="row" alignItems="center" gap="size-100">
           {validationResults && !validationResults.is_valid && (
-            <div className="inline-block mr-2">
-              {" "}
+            <View>
               <ValidationErrors validation={validationResults} />
-            </div>
+            </View>
           )}
-          <Tooltip title="Download Graph">
-            <Button
-              type="text"
-              icon={<Download size={18} />}
-              className="p-1.5 hover:bg-primary/10 rounded-md text-primary/75 hover:text-primary"
-              onClick={() => {
+          
+          <TooltipTrigger>
+            <ActionButton
+              onPress={() => {
                 const json = JSON.stringify(syncToJson(), null, 2);
                 const blob = new Blob([json], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
@@ -377,81 +375,76 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
                 a.click();
                 URL.revokeObjectURL(url);
               }}
-            />
-          </Tooltip>
-
-          <Tooltip title="Save Changes">
-            <Button
-              type="text"
-              icon={
-                <div className="relative">
-                  <Save size={18} />
-                  {isDirty && (
-                    <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></div>
-                  )}
-                </div>
-              }
-              className="p-1.5 hover:bg-primary/10 rounded-md text-primary/75 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleSave}
-            />
-          </Tooltip>
-
-          <Tooltip
-            title={
-              <div>
-                Validate Graph
-                {validationResults && (
-                  <div className="text-xs text-center my-1">
-                    {graphValidated ? (
-                      <span>
-                        <CheckCircle className="w-3 h-3 text-green-500 inline-block mr-1" />
-                        success
-                      </span>
-                    ) : (
-                      <div className="">
-                        <CircleX className="w-3 h-3 text-red-500 inline-block mr-1" />
-                        errors
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            }
-          >
-            <Button
-              type="text"
-              loading={validationLoading}
-              icon={
-                <div className="relative">
-                  <ListCheck size={18} />
-                  {validationResults && (
-                    <div
-                      className={` ${
-                        graphValidated ? "bg-green-500" : "bg-red-500"
-                      } absolute top-0 right-0 w-2 h-2  rounded-full`}
-                    ></div>
-                  )}
-                </div>
-              }
-              className="p-1.5 hover:bg-primary/10 rounded-md text-primary/75 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleValidate}
-            />
-          </Tooltip>
-
-          <Tooltip title="Run Graph">
-            <Button
-              type="primary"
-              icon={<PlayCircle size={18} />}
-              className="p-1.5 ml-2 px-2.5 hover:bg-primary/10 rounded-md text-primary/75 hover:text-primary"
-              onClick={() => {
-                setTestDrawerVisible(true);
-              }}
             >
-              Run
+              <Download size={18} />
+            </ActionButton>
+            <Tooltip>Download Graph</Tooltip>
+          </TooltipTrigger>
+
+          <TooltipTrigger>
+            <ActionButton onPress={handleSave}>
+              <Flex alignItems="center">
+                <Save size={18} />
+                {isDirty && (
+                  <View 
+                    UNSAFE_className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"
+                  />
+                )}
+              </Flex>
+            </ActionButton>
+            <Tooltip>Save Changes</Tooltip>
+          </TooltipTrigger>
+
+          <TooltipTrigger>
+            <ActionButton 
+              onPress={handleValidate}
+              isDisabled={validationLoading}
+            >
+              <Flex alignItems="center">
+                <ListCheck size={18} />
+                {validationResults && (
+                  <View 
+                    UNSAFE_className={`absolute top-0 right-0 w-2 h-2 rounded-full ${
+                      graphValidated ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  />
+                )}
+              </Flex>
+            </ActionButton>
+            <Tooltip>
+              <Flex direction="column">
+                <span>Validate Graph</span>
+                {validationResults && (
+                  <Flex direction="row" alignItems="center" gap="size-50">
+                    {graphValidated ? (
+                      <>
+                        <CheckCircle size={12} color="green" />
+                        <span>success</span>
+                      </>
+                    ) : (
+                      <>
+                        <CircleX size={12} color="red" />
+                        <span>errors</span>
+                      </>
+                    )}
+                  </Flex>
+                )}
+              </Flex>
+            </Tooltip>
+          </TooltipTrigger>
+
+          <TooltipTrigger>
+            <Button 
+              variant="cta"
+              onPress={() => setTestDrawerVisible(true)}
+            >
+              <PlayCircle size={18} />
+              <span>Run</span>
             </Button>
-          </Tooltip>
-        </div>
-      </div>
+            <Tooltip>Run Graph</Tooltip>
+          </TooltipTrigger>
+        </Flex>
+      </Flex>
 
       <DndContext
         sensors={sensors}
@@ -459,17 +452,25 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}
       >
-        <Layout className=" relative bg-primary  h-[calc(100vh-239px)] rounded">
+        <View 
+          UNSAFE_className="relative bg-primary h-[calc(100vh-239px)] rounded"
+          borderWidth="thin"
+          borderColor="dark"
+          borderRadius="medium"
+        >
           {!isJsonMode && selectedGallery && (
             <ComponentLibrary defaultGallery={selectedGallery} />
           )}
 
-          <Layout className="bg-primary rounded">
-            <Content className="relative rounded bg-tertiary  ">
-              <div
-                className={`w-full h-full transition-all duration-200 ${
+          <View 
+            UNSAFE_className="bg-primary rounded h-full"
+            backgroundColor="gray-50"
+          >
+            <View UNSAFE_className="relative rounded bg-tertiary h-full">
+              <View
+                UNSAFE_className={`w-full h-full transition-all duration-200 ${
                   isFullscreen
-                    ? "fixed inset-4 z-50 shadow bg-tertiary  backdrop-blur-sm"
+                    ? "fixed inset-4 z-50 shadow bg-tertiary backdrop-blur-sm"
                     : ""
                 }`}
               >
@@ -517,17 +518,26 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
                     />
                   </ReactFlow>
                 )}
-              </div>
-            </Content>
-          </Layout>
-        </Layout>
+              </View>
+            </View>
+          </View>
+        </View>
 
         <DragOverlay>
           {activeDragItem && (
-            <div className="bg-white border border-gray-200 shadow-lg p-2 rounded">
-              {activeDragItem.icon}
-              <span className="ml-2">{activeDragItem.label}</span>
-            </div>
+            <View 
+              backgroundColor="gray-50" 
+              borderWidth="thin" 
+              borderColor="gray-400"
+              padding="size-100"
+              borderRadius="medium"
+              UNSAFE_className="shadow-lg"
+            >
+              <Flex direction="row" alignItems="center" gap="size-100">
+                {activeDragItem.icon}
+                <span>{activeDragItem.label}</span>
+              </Flex>
+            </View>
           )}
         </DragOverlay>
       </DndContext>
@@ -539,7 +549,21 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
           component={syncToJson()!}
         />
       )}
-    </div>
+
+      {errorMessage && (
+        <DialogTrigger isOpen={!!errorMessage}>
+          <Button variant="negative" isHidden>Error</Button>
+          <AlertDialog 
+            title="Error"
+            variant="error"
+            primaryActionLabel="OK"
+            onPrimaryAction={() => setErrorMessage(null)}
+          >
+            {errorMessage}
+          </AlertDialog>
+        </DialogTrigger>
+      )}
+    </View>
   );
 };
 

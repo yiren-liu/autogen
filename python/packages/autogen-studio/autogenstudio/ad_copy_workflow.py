@@ -9,11 +9,11 @@ import dotenv
 dotenv.load_dotenv()
 
 # Initialize the OpenAI client
-model_client = AzureOpenAIChatCompletionClient(
+model_client = OpenAIChatCompletionClient(
     model="gpt-4o",
     api_key=os.getenv("OPENAI_API_KEY"),
-    azure_endpoint=os.getenv("OPENAI_API_BASE"),
-    api_version=os.getenv("OPENAI_API_VERSION")
+    base_url=os.getenv("OPENAI_API_BASE"),
+    # api_version=os.getenv("OPENAI_API_VERSION")
 )
 # Create agents for each step in the workflow
 brief_parser = AssistantAgent(

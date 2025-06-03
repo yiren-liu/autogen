@@ -1085,7 +1085,7 @@
     ],
     "graphs": [
       {
-        "provider": "autogen_agentchat.graphs.GraphChat",
+        "provider": "autogen_agentchat.teams.GraphFlow",
         "component_type": "graph",
         "version": 1,
         "component_version": 1,

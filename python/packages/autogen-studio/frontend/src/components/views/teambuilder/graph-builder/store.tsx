@@ -215,7 +215,7 @@ const visualElementsToGraph = (nodes: CustomNode[], edges: CustomEdge[]): Compon
   }
 
   const component: Component<GraphConfig> = {
-    provider: graphNode.data.component.provider || "autogen_agentchat.graphs.GraphChat", 
+    provider: graphNode.data.component.provider || "autogen_agentchat.teams.GraphFlow", 
     component_type: "graph",
     version: graphNode.data.component.version || 1,
     component_version: graphNode.data.component.component_version || 1,

@@ -1,5 +1,11 @@
 import React from "react";
-import { Button, Tooltip } from "antd";
+import { 
+  ActionButton, 
+  TooltipTrigger, 
+  Tooltip, 
+  Flex, 
+  View
+} from "@adobe/react-spectrum";
 import {
   Maximize2,
   Minimize2,
@@ -38,69 +44,96 @@ const GraphBuilderToolbar: React.FC<GraphBuilderToolbarProps> = ({
   onToggleMiniMap,
 }) => {
   return (
-    <div className="absolute top-4 right-4 z-10 flex gap-2">
-      <Tooltip title={`${isFullscreen ? "Exit" : "Enter"} Fullscreen`}>
-        <Button
-          type="text"
-          icon={isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          onClick={onToggleFullscreen}
-          className="bg-white/80 backdrop-blur-sm hover:bg-white"
-        />
-      </Tooltip>
+    <View 
+      position="absolute" 
+      top="size-100" 
+      right="size-100" 
+      zIndex={10}
+    >
+      <Flex direction="row" gap="size-100">
+        <TooltipTrigger>
+          <ActionButton 
+            onPress={onToggleFullscreen}
+            UNSAFE_className="bg-white/80 backdrop-blur-sm hover:bg-white"
+          >
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </ActionButton>
+          <Tooltip>{`${isFullscreen ? "Exit" : "Enter"} Fullscreen`}</Tooltip>
+        </TooltipTrigger>
 
-      <div className="bg-white/80 backdrop-blur-sm rounded flex">
-        <Tooltip title="Undo">
-          <Button
-            type="text"
-            icon={<Undo2 size={16} />}
-            onClick={onUndo}
-            disabled={!canUndo}
-            className="hover:bg-white disabled:opacity-50"
-          />
-        </Tooltip>
-        <Tooltip title="Redo">
-          <Button
-            type="text"
-            icon={<Redo2 size={16} />}
-            onClick={onRedo}
-            disabled={!canRedo}
-            className="hover:bg-white disabled:opacity-50"
-          />
-        </Tooltip>
-      </div>
+        <View 
+          backgroundColor="gray-50" 
+          borderRadius="medium"
+          UNSAFE_className="bg-white/80 backdrop-blur-sm"
+        >
+          <Flex direction="row">
+            <TooltipTrigger>
+              <ActionButton
+                onPress={onUndo}
+                isDisabled={!canUndo}
+                UNSAFE_className="hover:bg-white disabled:opacity-50"
+              >
+                <Undo2 size={16} />
+              </ActionButton>
+              <Tooltip>Undo</Tooltip>
+            </TooltipTrigger>
+            
+            <TooltipTrigger>
+              <ActionButton
+                onPress={onRedo}
+                isDisabled={!canRedo}
+                UNSAFE_className="hover:bg-white disabled:opacity-50"
+              >
+                <Redo2 size={16} />
+              </ActionButton>
+              <Tooltip>Redo</Tooltip>
+            </TooltipTrigger>
+          </Flex>
+        </View>
 
-      <Tooltip title="Auto Layout">
-        <Button
-          type="text"
-          icon={<Layout size={16} />}
-          onClick={onLayout}
-          className="bg-white/80 backdrop-blur-sm hover:bg-white"
-        />
-      </Tooltip>
+        <TooltipTrigger>
+          <ActionButton
+            onPress={onLayout}
+            UNSAFE_className="bg-white/80 backdrop-blur-sm hover:bg-white"
+          >
+            <Layout size={16} />
+          </ActionButton>
+          <Tooltip>Auto Layout</Tooltip>
+        </TooltipTrigger>
 
-      <div className="bg-white/80 backdrop-blur-sm rounded flex">
-        <Tooltip title={`${showGrid ? "Hide" : "Show"} Grid`}>
-          <Button
-            type="text"
-            icon={<Grid3X3 size={16} />}
-            onClick={onToggleGrid}
-            className={`hover:bg-white ${
-              showGrid ? "bg-primary/10 text-primary" : ""
-            }`}
-          />
-        </Tooltip>
-        <Tooltip title={`${showMiniMap ? "Hide" : "Show"} Mini Map`}>
-          <Button
-            type="text"
-            icon={<Map size={16} />}
-            onClick={onToggleMiniMap}
-            className={`hover:bg-white ${
-              showMiniMap ? "bg-primary/10 text-primary" : ""
-            }`}
-          />
-        </Tooltip>
-      </div>
-    </div>
+        <View 
+          backgroundColor="gray-50" 
+          borderRadius="medium"
+          UNSAFE_className="bg-white/80 backdrop-blur-sm"
+        >
+          <Flex direction="row">
+            <TooltipTrigger>
+              <ActionButton
+                onPress={onToggleGrid}
+                UNSAFE_className={`hover:bg-white ${
+                  showGrid ? "bg-primary/10 text-primary" : ""
+                }`}
+              >
+                <Grid3X3 size={16} />
+              </ActionButton>
+              <Tooltip>{`${showGrid ? "Hide" : "Show"} Grid`}</Tooltip>
+            </TooltipTrigger>
+            
+            <TooltipTrigger>
+              <ActionButton
+                onPress={onToggleMiniMap}
+                UNSAFE_className={`hover:bg-white ${
+                  showMiniMap ? "bg-primary/10 text-primary" : ""
+                }`}
+              >
+                <Map size={16} />
+              </ActionButton>
+              <Tooltip>{`${showMiniMap ? "Hide" : "Show"} Mini Map`}</Tooltip>
+            </TooltipTrigger>
+          </Flex>
+        </View>
+      </Flex>
+    </View>
   );
 };
 
