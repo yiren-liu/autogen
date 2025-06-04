@@ -6,6 +6,8 @@ import { graphAPI } from "./api";
 import { GraphSidebar } from "./graph-builder/sidebar";
 import { Gallery, type Graph } from "../../types/datamodel";
 import { GraphBuilder } from "./graph-builder/graphbuilder";
+import { GalleryAPI } from "../gallery/api";
+import { getLocalStorage } from "../../utils/utils";
 
 export const EvalScope: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +21,9 @@ export const EvalScope: React.FC = () => {
   });
 
   const [selectedGallery, setSelectedGallery] = useState<Gallery | null>(null);
-
+  const [galleries, setGalleries] = useState<Gallery[]>([]);
+  const [isLoadingGalleries, setIsLoadingGalleries] = useState(false);
+  
   const { user } = useContext(appContext);
   const [messageApi, contextHolder] = message.useMessage();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -51,6 +55,40 @@ export const EvalScope: React.FC = () => {
   useEffect(() => {
     fetchGraphs();
   }, [fetchGraphs]);
+
+
+    // Fetch galleries
+    const fetchGalleries = async () => {
+      if (!user?.id) return;
+      setIsLoadingGalleries(true);
+      try {
+        const galleryAPI = new GalleryAPI();
+        const data = await galleryAPI.listGalleries(user.id);
+        setGalleries(data);
+  
+        // Check localStorage for a previously saved gallery ID
+        const savedGalleryId = getLocalStorage(`selectedGalleryId_${user.id}`);
+  
+        if (savedGalleryId && data.length > 0) {
+          const savedGallery = data.find((g) => g.id === savedGalleryId);
+          if (savedGallery) {
+            setSelectedGallery(savedGallery);
+          } else if (!selectedGallery && data.length > 0) {
+            setSelectedGallery(data[0]);
+          }
+        } else if (!selectedGallery && data.length > 0) {
+          setSelectedGallery(data[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching galleries:", error);
+      } finally {
+        setIsLoadingGalleries(false);
+      }
+    };
+    // Fetch galleries on mount
+    React.useEffect(() => {
+      fetchGalleries();
+    }, [user?.id]);
 
   // Handle URL params
   useEffect(() => {

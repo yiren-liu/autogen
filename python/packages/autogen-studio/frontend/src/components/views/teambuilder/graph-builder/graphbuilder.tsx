@@ -458,9 +458,9 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
           borderColor="dark"
           borderRadius="medium"
         >
-          {!isJsonMode && selectedGallery && (
+          {/* {!isJsonMode && selectedGallery && (
             <ComponentLibrary defaultGallery={selectedGallery} />
-          )}
+          )} */}
 
           <View 
             UNSAFE_className="bg-primary rounded h-full"

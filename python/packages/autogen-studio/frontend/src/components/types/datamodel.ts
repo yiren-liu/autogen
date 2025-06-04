@@ -475,6 +475,7 @@ export interface GalleryConfig {
     models: Component<ModelConfig>[];
     tools: Component<ToolConfig>[];
     terminations: Component<TerminationConfig>[];
+    graphs: Component<GraphConfig>[];
   };
 }
 

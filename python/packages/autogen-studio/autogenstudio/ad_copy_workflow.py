@@ -11,126 +11,11 @@ dotenv.load_dotenv()
 # Initialize the OpenAI client
 model_client = OpenAIChatCompletionClient(
     model="gpt-4o",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    base_url=os.getenv("OPENAI_API_BASE"),
+    # api_key=os.getenv("OPENAI_API_KEY"),
+    # base_url=os.getenv("OPENAI_API_BASE"),
     # api_version=os.getenv("OPENAI_API_VERSION")
 )
-# Create agents for each step in the workflow
-brief_parser = AssistantAgent(
-    name="brief_parser",
-    model_client=model_client,
-    system_message="Parse product specifications, campaign goals, and constraints from client briefs."
-)
 
-audience_profiler = AssistantAgent(
-    name="audience_profiler",
-    model_client=model_client,
-    system_message="Analyze target audience demographics and psychographics to identify pain-points and motivations."
-)
-
-value_distiller = AssistantAgent(
-    name="value_distiller",
-    model_client=model_client,
-    system_message="Extract and distill key benefits and differentiators from product information."
-)
-
-concept_smith = AssistantAgent(
-    name="concept_smith",
-    model_client=model_client,
-    system_message="Generate creative big-idea angles and thematic hooks for ad campaigns."
-)
-
-headline_gen = AssistantAgent(
-    name="headline_gen",
-    model_client=model_client,
-    system_message="Create multiple compelling headline variants for each concept."
-)
-
-copy_writer = AssistantAgent(
-    name="copy_writer",
-    model_client=model_client,
-    system_message="Develop long-form body copy and call-to-action lines that align with headlines."
-)
-
-tone_guard = AssistantAgent(
-    name="tone_guard",
-    model_client=model_client,
-    system_message="Enforce brand voice, check for banned words, and ensure appropriate sentiment."
-)
-
-reg_checker = AssistantAgent(
-    name="reg_checker",
-    model_client=model_client,
-    system_message="Verify legal and industry compliance (e.g., FDA, FINRA) in all copy."
-)
-
-localizer = AssistantAgent(
-    name="localizer",
-    model_client=model_client,
-    system_message="Translate and culturally adapt copy blocks for international markets."
-)
-
-perf_predictor = AssistantAgent(
-    name="perf_predictor",
-    model_client=model_client,
-    system_message="Predict click-through rates and engagement metrics for copy variants."
-)
-
-reviewer_agent = AssistantAgent(
-    name="reviewer_agent",
-    model_client=model_client,
-    system_message="Simulate or collect feedback from brand managers and stakeholders."
-)
-
-packager = AssistantAgent(
-    name="packager",
-    model_client=model_client,
-    system_message="Bundle approved variants and metadata into final deliverable formats (CSV/JSON)."
-)
-
-# Build the workflow graph
-builder = DiGraphBuilder()
-
-# Add all nodes
-builder.add_node(brief_parser)\
-       .add_node(audience_profiler)\
-       .add_node(value_distiller)\
-       .add_node(concept_smith)\
-       .add_node(headline_gen)\
-       .add_node(copy_writer)\
-       .add_node(tone_guard)\
-       .add_node(reg_checker)\
-       .add_node(localizer)\
-       .add_node(perf_predictor)\
-       .add_node(reviewer_agent)\
-       .add_node(packager)
-
-# Add main flow edges
-builder.add_edge(brief_parser, audience_profiler)
-builder.add_edge(audience_profiler, value_distiller)
-builder.add_edge(value_distiller, concept_smith)
-builder.add_edge(concept_smith, headline_gen)
-builder.add_edge(concept_smith, copy_writer)
-builder.add_edge(headline_gen, tone_guard)
-builder.add_edge(copy_writer, tone_guard)
-builder.add_edge(tone_guard, reg_checker)
-builder.add_edge(reg_checker, localizer)
-builder.add_edge(localizer, perf_predictor)
-builder.add_edge(perf_predictor, reviewer_agent)
-builder.add_edge(reviewer_agent, packager)
-
-# Add feedback loops
-builder.add_edge(perf_predictor, headline_gen)
-builder.add_edge(reg_checker, copy_writer)
-
-# Build the graph
-graph = builder.build()
-
-# Create the workflow
-flow = GraphFlow(
-    participants=builder.get_participants(),
-    graph=graph,
-)
 
 def run_ad_copy_workflow(brief):
     """Run the ad copy generation workflow with the given brief."""
@@ -189,6 +74,116 @@ def visualize_graph(graph_builder):
     print("Graph visualization saved as 'ad_copy_workflow_graph.png'")
 
 if __name__ == "__main__":
+
+    # Create agents for each step in the workflow
+    need_analysis = AssistantAgent(
+        name="need_analysis",
+        model_client=model_client,
+        system_message="Analyze the user's needs and preferences to determine the best way to meet their needs."
+    )
+    social_analyst = AssistantAgent(
+        name="social_analyst",
+        model_client=model_client,
+        system_message="Analyze the user's social media presence and preferences to determine the best way to meet their needs."
+    )
+    user_data_analyst = AssistantAgent(
+        name="user_data_analyst",
+        model_client=model_client,
+        system_message="Analyze the user's data to determine the best way to meet their needs."
+    )
+    concept_ideation = AssistantAgent(
+        name="concept_ideation",
+        model_client=model_client,
+        system_message="Generate a concept for the user's needs."
+    )
+    campaign_mgr = AssistantAgent(
+        name="campaign_mgr",
+        model_client=model_client,
+        system_message="Manage the campaign and ensure it is on track to meet the user's needs."
+    )
+    email_gen = AssistantAgent(
+        name="email_gen",
+        model_client=model_client,
+        system_message="Generate an email for the user's needs."
+    )
+    tv_planner = AssistantAgent(
+        name="tv_planner",
+        model_client=model_client,
+        system_message="Plan the TV campaign for the user's needs."
+    )
+    website_gen = AssistantAgent(
+        name="website_gen",
+        model_client=model_client,
+        system_message="Generate a website for the user's needs."
+    )
+    headline_gen = AssistantAgent(
+        name="headline_gen",
+        model_client=model_client,
+        system_message="Generate a headline for the user's needs."
+    )
+    localizer = AssistantAgent(
+        name="localizer",
+        model_client=model_client,
+        system_message="Localize the ad copy for the user's needs."
+    )
+    stakeholder_review = AssistantAgent(
+        name="stakeholder_review",
+        model_client=model_client,
+        system_message="Review ideas and say 'REVISE' and provide feedbacks, or 'APPROVE' for final approval."
+    )
+    output_sink = AssistantAgent(
+        name="output_sink",
+        model_client=model_client,
+        system_message="Output the ad copy for the user's needs as a comprehensive report."
+    )
+
+
+    # Build the workflow graph
+    builder = DiGraphBuilder()
+
+    # Add all nodes
+    builder\
+        .add_node(need_analysis)\
+        .add_node(social_analyst)\
+        .add_node(user_data_analyst)\
+        .add_node(concept_ideation)\
+        .add_node(campaign_mgr)\
+        .add_node(email_gen)\
+        .add_node(tv_planner)\
+        .add_node(website_gen)\
+        .add_node(headline_gen)\
+        .add_node(localizer)\
+        .add_node(stakeholder_review)\
+        .add_node(output_sink)
+
+    # Add main flow edges
+    ## conditional edges
+    builder.add_edge(social_analyst,  need_analysis,   condition="UPDATE")
+    builder.add_edge(user_data_analyst, need_analysis, condition="UPDATE")
+    builder.add_edge(stakeholder_review, campaign_mgr, condition="REVISE")
+    builder.add_edge(stakeholder_review, output_sink,  condition="SUBMIT")
+
+    ## unconditional edges
+    builder.add_edge(need_analysis,        concept_ideation)
+    builder.add_edge(concept_ideation,     campaign_mgr)
+
+    builder.add_edge(need_analysis,        social_analyst)
+    builder.add_edge(need_analysis,        user_data_analyst)
+
+    builder.add_edge(campaign_mgr,         email_gen)
+    builder.add_edge(campaign_mgr,         tv_planner)
+    builder.add_edge(campaign_mgr,         website_gen)
+    builder.add_edge(campaign_mgr,         headline_gen)
+
+    builder.add_edge(tv_planner,           website_gen)
+
+    builder.add_edge(campaign_mgr,         localizer)
+    builder.add_edge(localizer,            stakeholder_review)
+
+    builder.add_edge(campaign_mgr,         stakeholder_review)
+
+
+
     sample_brief = """
     Product: EcoSmart Home Battery
     Campaign Goals: Launch a new residential battery storage system that pairs with solar panels
@@ -206,6 +201,17 @@ if __name__ == "__main__":
     
     # Visualize the workflow graph
     visualize_graph(builder) 
+
+    builder.set_entry_point(need_analysis)
+
+    # Build the graph
+    graph = builder.build()
+
+    # Create the workflow
+    flow = GraphFlow(
+        participants=builder.get_participants(),
+        graph=graph,
+    )
     
     chat_history = run_ad_copy_workflow(sample_brief)
     print(chat_history)

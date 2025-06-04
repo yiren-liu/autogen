@@ -6,6 +6,7 @@ import anthropic
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_agentchat.conditions import MaxMessageTermination, TextMentionTermination
 from autogen_agentchat.teams import RoundRobinGroupChat, SelectorGroupChat
+from autogen_agentchat.teams import DiGraphBuilder, GraphFlow
 from autogen_core import ComponentModel
 from autogen_core.models import ModelInfo
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
@@ -118,6 +119,11 @@ class GalleryBuilder:
     ) -> "GalleryBuilder":
         """Add a termination condition component with optional custom label and description."""
         self.terminations.append(self._update_component_metadata(termination, label, description))
+        return self
+    
+    def add_graph(self, graph: ComponentModel, label: Optional[str] = None, description: Optional[str] = None) -> "GalleryBuilder":
+        """Add a graph component to the gallery with optional custom label and description."""
+        self.graphs.append(self._update_component_metadata(graph, label, description))
         return self
 
     def build(self) -> GalleryConfig:
@@ -422,8 +428,131 @@ Read the above conversation. Then select the next role from {participants} to pl
         description="A team with 3 agents - a Research Assistant that performs web searches and analyzes information, a Verifier that ensures research quality and completeness, and a Summary Agent that provides a detailed markdown summary of the research as a report to the user.",
     )
 
+    # build the graph
+    graph = graph_builder()
+    builder.add_graph(graph.dump_component(), label="Ad Copy Workflow", description="A graph that represents the ad copy workflow.")
+
     return builder.build()
 
+
+def graph_builder() -> GraphFlow:
+    """Build a demo graph for the gallery."""
+    # Create agents for each step in the workflow
+    model_client = OpenAIChatCompletionClient(model="gpt-4o", temperature=0.7)
+    need_analysis = AssistantAgent(
+        name="need_analysis",
+        model_client=model_client,
+        system_message="Analyze the user's needs and preferences to determine the best way to meet their needs."
+    )
+    social_analyst = AssistantAgent(
+        name="social_analyst",
+        model_client=model_client,
+        system_message="Analyze the user's social media presence and preferences to determine the best way to meet their needs."
+    )
+    user_data_analyst = AssistantAgent(
+        name="user_data_analyst",
+        model_client=model_client,
+        system_message="Analyze the user's data to determine the best way to meet their needs."
+    )
+    concept_ideation = AssistantAgent(
+        name="concept_ideation",
+        model_client=model_client,
+        system_message="Generate a concept for the user's needs."
+    )
+    campaign_mgr = AssistantAgent(
+        name="campaign_mgr",
+        model_client=model_client,
+        system_message="Manage the campaign and ensure it is on track to meet the user's needs."
+    )
+    email_gen = AssistantAgent(
+        name="email_gen",
+        model_client=model_client,
+        system_message="Generate an email for the user's needs."
+    )
+    tv_planner = AssistantAgent(
+        name="tv_planner",
+        model_client=model_client,
+        system_message="Plan the TV campaign for the user's needs."
+    )
+    website_gen = AssistantAgent(
+        name="website_gen",
+        model_client=model_client,
+        system_message="Generate a website for the user's needs."
+    )
+    headline_gen = AssistantAgent(
+        name="headline_gen",
+        model_client=model_client,
+        system_message="Generate a headline for the user's needs."
+    )
+    localizer = AssistantAgent(
+        name="localizer",
+        model_client=model_client,
+        system_message="Localize the ad copy for the user's needs."
+    )
+    stakeholder_review = AssistantAgent(
+        name="stakeholder_review",
+        model_client=model_client,
+        system_message="Review ideas and say 'REVISE' and provide feedbacks, or 'APPROVE' for final approval."
+    )
+    output_sink = AssistantAgent(
+        name="output_sink",
+        model_client=model_client,
+        system_message="Output the ad copy for the user's needs as a comprehensive report."
+    )
+
+
+    # Build the workflow graph
+    builder = DiGraphBuilder()
+
+    # Add all nodes
+    builder\
+        .add_node(need_analysis)\
+        .add_node(social_analyst)\
+        .add_node(user_data_analyst)\
+        .add_node(concept_ideation)\
+        .add_node(campaign_mgr)\
+        .add_node(email_gen)\
+        .add_node(tv_planner)\
+        .add_node(website_gen)\
+        .add_node(headline_gen)\
+        .add_node(localizer)\
+        .add_node(stakeholder_review)\
+        .add_node(output_sink)
+
+    # Add main flow edges
+    ## conditional edges
+    builder.add_edge(social_analyst,  need_analysis,   condition="UPDATE")
+    builder.add_edge(user_data_analyst, need_analysis, condition="UPDATE")
+    builder.add_edge(stakeholder_review, campaign_mgr, condition="REVISE")
+    builder.add_edge(stakeholder_review, output_sink,  condition="SUBMIT")
+
+    ## unconditional edges
+    builder.add_edge(need_analysis,        concept_ideation)
+    builder.add_edge(concept_ideation,     campaign_mgr)
+
+    builder.add_edge(need_analysis,        social_analyst)
+    builder.add_edge(need_analysis,        user_data_analyst)
+
+    builder.add_edge(campaign_mgr,         email_gen)
+    builder.add_edge(campaign_mgr,         tv_planner)
+    builder.add_edge(campaign_mgr,         website_gen)
+    builder.add_edge(campaign_mgr,         headline_gen)
+
+    builder.add_edge(tv_planner,           website_gen)
+
+    builder.add_edge(campaign_mgr,         localizer)
+    builder.add_edge(localizer,            stakeholder_review)
+
+    builder.add_edge(campaign_mgr,         stakeholder_review)
+    builder.set_entry_point(need_analysis)
+
+    graph = builder.build()
+    flow  = GraphFlow(
+        participants=builder.get_participants(),
+        graph=graph,
+    )
+    return flow
+    
 
 if __name__ == "__main__":
     # Create and save the gallery

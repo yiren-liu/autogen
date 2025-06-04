@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { 
   Button, 
   SearchField, 
@@ -67,27 +67,42 @@ export const GraphSidebar: React.FC<GraphSidebarProps> = ({
   const [deleteDialogGraph, setDeleteDialogGraph] = useState<Graph | null>(null);
   const editInputRef = useRef<any>(null);
 
+  // useEffect(() => {
+  //   if (!selectedGallery) {
+  //     setSelectedGallery(defaultGallery);
+  //   }
+  // }, [selectedGallery, setSelectedGallery]);
+
   const filteredGraphs = graphs.filter((graph) =>
     graph.component?.label?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleCreateGraph = () => {
-    const newGraph: Graph = {
-      component: {
-        provider: "autogen_agentchat.teams.GraphFlow",
-        component_type: "graph",
-        version: 1,
-        component_version: 1,
-        description: "A new graph-based conversation flow",
-        label: "New Graph",
-        config: {
-          participants: [],
-          graph: {
-            nodes: {},
-          },
-        },
-      },
-    };
+    // const newGraph: Graph = {
+    //   component: {
+    //     provider: "autogen_agentchat.teams.GraphFlow",
+    //     component_type: "graph",
+    //     version: 1,
+    //     component_version: 1,
+    //     description: "A new graph-based conversation flow",
+    //     label: "New Graph",
+    //     config: {
+    //       participants: [],
+    //       graph: {
+    //         nodes: {},
+    //       },
+    //     },
+    //   },
+    // };
+    if (!selectedGallery?.config.components?.graphs?.length) {
+      return;
+    }
+    const newGraph = Object.assign(
+      {},
+      { component: selectedGallery.config.components.graphs[0] }
+    );
+    newGraph.component.label =
+      "default_graph" + new Date().getTime().toString().slice(0, 2);
     onCreateGraph(newGraph);
   };
 
@@ -204,7 +219,7 @@ export const GraphSidebar: React.FC<GraphSidebarProps> = ({
             <Divider size="S" />
 
             {/* Gallery Info */}
-            {selectedGallery && (
+            {/* {selectedGallery && (
               <>
                 <View 
                   padding="size-200" 
@@ -223,7 +238,7 @@ export const GraphSidebar: React.FC<GraphSidebarProps> = ({
                 </View>
                 <Divider size="S" />
               </>
-            )}
+            )} */}
 
             {/* Graph List */}
             <View flex="1 1 auto" UNSAFE_className="overflow-y-auto" backgroundColor="gray-75">

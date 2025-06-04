@@ -88,12 +88,12 @@ const graphToVisualElements = (component: Component<GraphConfig>) => {
     nodes.push(participantNode);
 
     // Add edge from graph to participant
-    edges.push({
-      id: `graph-agent-${index}`,
-      source: "graph",
-      target: `agent-${index}`,
-      type: "graph-connection",
-    });
+    // edges.push({
+    //   id: `graph-agent-${index}`,
+    //   source: "graph",
+    //   target: `agent-${index}`,
+    //   type: "graph-connection",
+    // });
   });
 
   // Add termination condition node if exists
