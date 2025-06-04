@@ -26,7 +26,14 @@ graph-builder/
 ├── store.tsx            # Zustand store for graph state management  
 ├── toolbar.tsx          # Toolbar with fullscreen, undo/redo, layout controls
 ├── sidebar.tsx          # Graph list sidebar with search and gallery integration
-└── testdrawer.tsx       # Separate test drawer for graph components
+├── testdrawer.tsx       # Separate test drawer for graph components
+├── types.ts             # TypeScript types (copied from ../builder/types.ts)
+├── nodes.tsx            # Node components (copied with updated imports)
+└── component-editor/    # Component editor directory
+    ├── component-editor.tsx  # Main editor (Adobe Spectrum version)
+    ├── testresults.tsx      # Test results display
+    ├── detailgroup.tsx      # Detail group component
+    └── fields/              # Field components (copied from builder)
 ```
 
 ### Store Pattern
@@ -83,6 +90,14 @@ graph-builder/
 - Used Adobe Spectrum `DialogTrigger`, `Dialog`, `Button`, `Checkbox`, `AlertDialog`
 - Converted drawer pattern to dialog pattern with proper sizing
 
+**ComponentEditor (component-editor.tsx):**
+- Replaced Ant Design `Button`, `Breadcrumb`, `message`, `Tooltip`
+- Used Adobe Spectrum `Button`, `Breadcrumbs`, `Item`, `View`, `ActionButton`, `TooltipTrigger`, `Tooltip`, `Flex`, `AlertDialog`, `DialogTrigger`
+- Replaced message.useMessage with AlertDialog state management
+- Updated Breadcrumb to use Adobe Spectrum Breadcrumbs with Item components
+
+
+
 ### Color Value Corrections
 - `backgroundColor="gray-25"` → `backgroundColor="gray-50"`
 - `borderColor="gray"` → `borderColor="gray-400"`
@@ -107,3 +122,24 @@ graph-builder/
 - GalleryManager component props interface required TypeScript casting workaround
 - Some complex custom styling may require `UNSAFE_className` usage
 - Adobe Spectrum components have different event signatures than Ant Design
+
+## Component Migration from Builder to Graph-Builder
+
+### Migration Pattern
+When migrating components from `../builder` to graph-builder directory:
+1. Copy the component files to graph-builder directory
+2. Update imports to use local references (e.g., `../builder/types` → `./types`)
+3. Update store imports from `useTeamBuilderStore` to `useGraphBuilderStore`
+4. Convert Ant Design components to Adobe Spectrum where appropriate
+5. Maintain the same directory structure for consistency
+
+### Files Migrated
+- `types.ts` - Direct copy (already existed)
+- `nodes.tsx` - Updated store import to `useGraphBuilderStore`
+- `component-editor/` directory with all field components
+- Field components were copied as-is (still using Ant Design)
+
+### Import Updates Made
+- `graphbuilder.tsx`: Updated imports from `../builder/*` to `./*`
+- `store.tsx`: Updated import from `../builder/types` to `./types`
+- `nodes.tsx`: Updated store import to use local graph builder store

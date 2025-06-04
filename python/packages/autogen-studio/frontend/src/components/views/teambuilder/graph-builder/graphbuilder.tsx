@@ -42,10 +42,13 @@ import {
   Save,
 } from "lucide-react";
 import { useGraphBuilderStore } from "./store";
-import { ComponentLibrary } from "../builder/library";
+// import { ComponentLibrary } from "../builder/library";
 import { ComponentTypes, Gallery, Graph } from "../../../types/datamodel";
-import { CustomNode, CustomEdge, DragItem } from "../builder/types";
-import { edgeTypes, nodeTypes } from "../builder/nodes";
+
+
+import { CustomNode, CustomEdge, DragItem } from "./types";
+import { edgeTypes, nodeTypes } from "./nodes";
+import ComponentEditor from "./component-editor/component-editor";
 
 // import builder css
 import "../builder/builder.css";
@@ -55,7 +58,6 @@ import debounce from "lodash.debounce";
 import TestDrawer from "./testdrawer";
 import { validationAPI, ValidationResponse } from "../api";
 import { ValidationErrors } from "../builder/validationerrors";
-import ComponentEditor from "../builder/component-editor/component-editor";
 
 interface DragItemData {
   type: ComponentTypes;

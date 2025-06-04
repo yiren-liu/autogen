@@ -13,7 +13,7 @@ import {
   DiGraphNode,
   DiGraphEdge,
 } from "../../../types/datamodel";
-import { CustomNode, CustomEdge } from "../builder/types";
+import { CustomNode, CustomEdge } from "./types";
 
 // Helper to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
