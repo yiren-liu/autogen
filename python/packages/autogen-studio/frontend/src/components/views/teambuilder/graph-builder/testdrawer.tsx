@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
-import { Drawer, Button, message, Checkbox } from "antd";
+import { View, Flex, Checkbox, AlertDialog, DialogTrigger, Button } from "@adobe/react-spectrum";
 import { Component, GraphConfig, Team, Session } from "../../../types/datamodel";
 import ChatView from "../../playground/chat/chat";
 import { appContext } from "../../../../hooks/provider";
@@ -21,7 +21,7 @@ const TestDrawer: React.FC<TestDrawerProps> = ({
   const [tempTeam, setTempTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteOnClose, setDeleteOnClose] = useState(true);
-  const [messageApi, contextHolder] = message.useMessage();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { user } = useContext(appContext);
 
@@ -65,11 +65,11 @@ const TestDrawer: React.FC<TestDrawerProps> = ({
       setSession(createdSession);
     } catch (error) {
       console.error("Error creating temporary team and session:", error);
-      messageApi.error("Failed to create test environment");
+      setErrorMessage("Failed to create test environment");
     } finally {
       setLoading(false);
     }
-  }, [user?.id, component, messageApi]);
+  }, [user?.id, component]);
 
   // Cleanup temp team and session
   const cleanup = useCallback(async () => {
@@ -90,18 +90,18 @@ const TestDrawer: React.FC<TestDrawerProps> = ({
       setTempTeam(null);
     } catch (error) {
       console.error("Error cleaning up test resources:", error);
-      messageApi.error("Error cleaning up test resources");
+      setErrorMessage("Error cleaning up test resources");
     }
   }, [session?.id, tempTeam?.id, user?.id]);
 
-  // Setup temp team and session when drawer opens
+  // Setup temp team and session when component becomes visible
   useEffect(() => {
     if (isVisible && component && !session && !tempTeam) {
       createTempTeamAndSession();
     }
   }, [isVisible, component, session, tempTeam, createTempTeamAndSession]);
 
-  // Handle drawer close
+  // Handle close
   const handleClose = async () => {
     if (deleteOnClose) {
       await cleanup();
@@ -110,27 +110,48 @@ const TestDrawer: React.FC<TestDrawerProps> = ({
   };
 
   return (
-    <>
-      {contextHolder}
-      <Drawer
-        title={<span>Test Graph: {component?.label || "Untitled Graph"}</span>}
-        size="large"
-        placement="right"
-        onClose={handleClose}
-        open={isVisible}
-        extra={
+    <View UNSAFE_style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Error handling */}
+      {errorMessage && (
+        <DialogTrigger isOpen={!!errorMessage}>
+          <Button variant="negative" isHidden>Error</Button>
+          <AlertDialog 
+            title="Error"
+            variant="error"
+            primaryActionLabel="OK"
+            onPrimaryAction={() => setErrorMessage(null)}
+          >
+            {errorMessage}
+          </AlertDialog>
+        </DialogTrigger>
+      )}
+
+      {/* Title and controls */}
+      <View UNSAFE_style={{ flexShrink: 0, marginBottom: '16px' }}>
+        <Flex direction="column" gap="size-150">
+          <View UNSAFE_className="text-lg font-semibold">
+            Test Graph: {component?.label || "Untitled Graph"}
+          </View>
+          
           <Checkbox
-            checked={deleteOnClose}
-            onChange={(e) => setDeleteOnClose(e.target.checked)}
+            isSelected={deleteOnClose}
+            onChange={setDeleteOnClose}
           >
             Delete session on close
           </Checkbox>
-        }
-      >
-        {loading && <p>Creating a test session...</p>}
+        </Flex>
+      </View>
+
+      {/* Content */}
+      <View UNSAFE_style={{ flex: 1, minHeight: 0 }}>
+        {loading && (
+          <View UNSAFE_style={{ padding: '24px' }}>
+            <p>Creating a test session...</p>
+          </View>
+        )}
         {session && <ChatView session={session} showCompareButton={false} />}
-      </Drawer>
-    </>
+      </View>
+    </View>
   );
 };
 

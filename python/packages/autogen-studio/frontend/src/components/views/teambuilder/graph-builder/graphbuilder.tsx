@@ -40,6 +40,7 @@ import {
   ListCheck,
   PlayCircle,
   Save,
+  X,
 } from "lucide-react";
 import { useGraphBuilderStore } from "./store";
 // import { ComponentLibrary } from "../builder/library";
@@ -59,7 +60,6 @@ import debounce from "lodash.debounce";
 import TestDrawer from "./testdrawer";
 import { validationAPI, ValidationResponse } from "../api";
 import { ValidationErrors } from "../builder/validationerrors";
-import { Drawer } from "antd";
 
 interface DragItemData {
   type: ComponentTypes;
@@ -96,7 +96,7 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
     useState<ValidationResponse | null>(null);
 
   const [validationLoading, setValidationLoading] = useState(false);
-  const [testDrawerVisible, setTestDrawerVisible] = useState(false);
+  const [rightPanelMode, setRightPanelMode] = useState<'none' | 'component' | 'test'>('none');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
@@ -307,6 +307,15 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
     return unsubscribe;
   }, [setNodes, setEdges]);
 
+  // Open component editor when a node is selected
+  React.useEffect(() => {
+    if (selectedNodeId) {
+      setRightPanelMode('component');
+    } else if (rightPanelMode === 'component') {
+      setRightPanelMode('none');
+    }
+  }, [selectedNodeId, rightPanelMode]);
+
   const validateDropTarget = (
     draggedType: ComponentTypes,
     targetType: ComponentTypes
@@ -367,8 +376,11 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
     setActiveDragItem(null);
   };
 
-  const handleTestDrawerClose = () => {
-    setTestDrawerVisible(false);
+  const handleCloseRightPanel = () => {
+    setRightPanelMode('none');
+    if (selectedNodeId) {
+      setSelectedNode(null);
+    }
   };
 
   const graphValidated = validationResults && validationResults.is_valid;
@@ -383,6 +395,8 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
       setActiveDragItem(active.data.current as DragItemData);
     }
   };
+
+  const rightPanelWidth = rightPanelMode === 'none' ? '0px' : '400px';
 
   return (
     <View>
@@ -483,7 +497,7 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
           <TooltipTrigger>
             <Button 
               variant="cta"
-              onPress={() => setTestDrawerVisible(true)}
+              onPress={() => setRightPanelMode('test')}
             >
               <PlayCircle size={18} />
               <span>Run</span>
@@ -499,105 +513,152 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}
       >
-        <View 
-          UNSAFE_className="relative bg-primary h-[calc(100vh-239px)] rounded"
-          borderWidth="thin"
-          borderColor="dark"
-          borderRadius="medium"
-        >
-          {/* {!isJsonMode && selectedGallery && (
-            <ComponentLibrary defaultGallery={selectedGallery} />
-          )} */}
-
+        <Flex direction="row" height="calc(100vh - 239px)">
+          {/* Main graph view */}
           <View 
-            UNSAFE_className="bg-primary rounded h-full"
-            backgroundColor="gray-50"
+            flex
+            UNSAFE_className="relative bg-primary rounded"
+            borderWidth="thin"
+            borderColor="dark"
+            borderRadius="medium"
+            UNSAFE_style={{ 
+              width: `calc(100% - ${rightPanelWidth})`,
+              transition: 'width 0.2s ease-in-out'
+            }}
           >
-            <View UNSAFE_className="relative rounded bg-tertiary h-full">
-              <View
-                UNSAFE_className={`w-full h-full transition-all duration-200 ${
-                  isFullscreen
-                    ? "fixed inset-4 z-50 shadow bg-tertiary backdrop-blur-sm"
-                    : ""
-                }`}
-              >
-                {isJsonMode ? (
-                  <MonacoEditor
-                    value={JSON.stringify(syncToJson(), null, 2)}
-                    onChange={handleJsonChange}
-                    editorRef={editorRef}
-                    language="json"
-                    minimap={false}
-                  />
-                ) : (
-                  <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    nodeTypes={nodeTypes}
-                    edgeTypes={edgeTypes}
-                    deleteKeyCode={["Backspace", "Delete"]}
-                    fitView
-                    snapToGrid={showGrid}
-                    className="reactflow-wrapper"
-                  >
-                    <Background
-                      variant={BackgroundVariant.Dots}
-                      gap={20}
-                      size={1}
-                      style={{ display: showGrid ? "block" : "none" }}
+            <View 
+              UNSAFE_className="bg-primary rounded h-full"
+              backgroundColor="gray-50"
+            >
+              <View UNSAFE_className="relative rounded bg-tertiary h-full">
+                <View
+                  UNSAFE_className={`w-full h-full transition-all duration-200 ${
+                    isFullscreen
+                      ? "fixed inset-4 z-50 shadow bg-tertiary backdrop-blur-sm"
+                      : ""
+                  }`}
+                >
+                  {isJsonMode ? (
+                    <MonacoEditor
+                      value={JSON.stringify(syncToJson(), null, 2)}
+                      onChange={handleJsonChange}
+                      editorRef={editorRef}
+                      language="json"
+                      minimap={false}
                     />
-                    {showMiniMap && <MiniMap />}
-                    <GraphBuilderToolbar
-                      onToggleFullscreen={handleToggleFullscreen}
-                      isFullscreen={isFullscreen}
-                      onUndo={undo}
-                      onRedo={redo}
-                      canUndo={canUndo}
-                      canRedo={canRedo}
-                      onLayout={layoutNodes}
-                      showGrid={showGrid}
-                      onToggleGrid={() => setShowGrid(!showGrid)}
-                      showMiniMap={showMiniMap}
-                      onToggleMiniMap={() => setShowMiniMap(!showMiniMap)}
-                    />
-                  </ReactFlow>
-                )}
+                  ) : (
+                    <ReactFlow
+                      nodes={nodes}
+                      edges={edges}
+                      onNodesChange={onNodesChange}
+                      onEdgesChange={onEdgesChange}
+                      onConnect={onConnect}
+                      nodeTypes={nodeTypes}
+                      edgeTypes={edgeTypes}
+                      deleteKeyCode={["Backspace", "Delete"]}
+                      fitView
+                      snapToGrid={showGrid}
+                      className="reactflow-wrapper"
+                    >
+                      <Background
+                        variant={BackgroundVariant.Dots}
+                        gap={20}
+                        size={1}
+                        style={{ display: showGrid ? "block" : "none" }}
+                      />
+                      {showMiniMap && <MiniMap />}
+                      <GraphBuilderToolbar
+                        onToggleFullscreen={handleToggleFullscreen}
+                        isFullscreen={isFullscreen}
+                        onUndo={undo}
+                        onRedo={redo}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                        onLayout={layoutNodes}
+                        showGrid={showGrid}
+                        onToggleGrid={() => setShowGrid(!showGrid)}
+                        showMiniMap={showMiniMap}
+                        onToggleMiniMap={() => setShowMiniMap(!showMiniMap)}
+                      />
+                    </ReactFlow>
+                  )}
+                </View>
               </View>
             </View>
           </View>
-          {selectedNodeId && (
-            <Drawer
-              title="Edit Component"
-              placement="right"
-              size="large"
-              onClose={() => setSelectedNode(null)}
-              open={!!selectedNodeId}
-              className="component-editor-drawer"
+
+          {/* Right panel for component editor or test drawer */}
+          {rightPanelMode !== 'none' && (
+            <View 
+              width="400px"
+              borderWidth="thin"
+              borderColor="dark"
+              borderRadius="medium"
+              backgroundColor="gray-50"
+              UNSAFE_className="ml-2 overflow-hidden"
+              UNSAFE_style={{ 
+                transition: 'width 0.2s ease-in-out'
+              }}
             >
-              {nodes.find((n) => n.id === selectedNodeId)?.data.component && (
-                <ComponentEditor
-                  component={
-                    nodes.find((n) => n.id === selectedNodeId)!.data.component
-                  }
-                  onChange={(updatedComponent) => {
-                    // console.log("builder updating component", updatedComponent);
-                    if (selectedNodeId) {
-                      updateNode(selectedNodeId, {
-                        component: updatedComponent,
-                      });
-                      handleSave();
-                    }
-                  }}
-                  onClose={() => setSelectedNode(null)}
-                  navigationDepth={true}
-                />
-              )}
-            </Drawer>
+                                            <View 
+                 padding="size-150"
+                 borderBottomWidth="thin"
+                 borderBottomColor="gray-300"
+               >
+                 <Flex 
+                   direction="row" 
+                   alignItems="center" 
+                   justifyContent="space-between"
+                 >
+                   <View UNSAFE_className="font-semibold">
+                     {rightPanelMode === 'component' ? 'Edit Component' : 'Test Graph'}
+                   </View>
+                   <ActionButton onPress={handleCloseRightPanel}>
+                     <X size={16} />
+                   </ActionButton>
+                 </Flex>
+               </View>
+              
+              <View 
+                UNSAFE_className="panel-content"
+                UNSAFE_style={{ 
+                  height: 'calc(100% - 60px)', // Account for header height
+                  overflow: 'auto',
+                  padding: '12px'
+                }}
+              >
+                {rightPanelMode === 'component' && selectedNodeId && (
+                  <>
+                    {nodes.find((n) => n.id === selectedNodeId)?.data.component && (
+                      <ComponentEditor
+                        component={
+                          nodes.find((n) => n.id === selectedNodeId)!.data.component
+                        }
+                        onChange={(updatedComponent) => {
+                          if (selectedNodeId) {
+                            updateNode(selectedNodeId, {
+                              component: updatedComponent,
+                            });
+                            // Note: API save is separate - triggered by main save button
+                          }
+                        }}
+                        navigationDepth={true}
+                      />
+                    )}
+                  </>
+                )}
+                
+                {rightPanelMode === 'test' && syncToJson() && (
+                  <TestDrawer
+                    isVisible={true}
+                    onClose={handleCloseRightPanel}
+                    component={syncToJson()!}
+                  />
+                )}
+              </View>
+            </View>
           )}
-        </View>
+        </Flex>
 
         <DragOverlay>
           {activeDragItem && (
@@ -617,14 +678,6 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
           )}
         </DragOverlay>
       </DndContext>
-
-      {testDrawerVisible && syncToJson() && (
-        <TestDrawer
-          isVisible={testDrawerVisible}
-          onClose={handleTestDrawerClose}
-          component={syncToJson()!}
-        />
-      )}
 
       {errorMessage && (
         <DialogTrigger isOpen={!!errorMessage}>

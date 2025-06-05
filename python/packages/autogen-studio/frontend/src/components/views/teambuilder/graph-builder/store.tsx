@@ -29,7 +29,7 @@ interface GraphBuilderState {
   setNodes: (nodes: CustomNode[]) => void;
   setEdges: (edges: CustomEdge[]) => void;
   addNode: (position: { x: number; y: number }, config: ComponentConfig, targetNodeId?: string) => void;
-  updateNode: (nodeId: string, config: ComponentConfig) => void;
+  updateNode: (nodeId: string, updates: Partial<{ component: Component<ComponentConfig> }>) => void;
   deleteNode: (nodeId: string) => void;
   setSelectedNode: (nodeId: string | null) => void;
   
@@ -315,7 +315,7 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
       get().addToHistory();
     },
 
-    updateNode: (nodeId, config) => {
+    updateNode: (nodeId, updates) => {
       const { nodes } = get();
       const updatedNodes = nodes.map(node =>
         node.id === nodeId
@@ -323,7 +323,7 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
               ...node,
               data: {
                 ...node.data,
-                component: config as Component<ComponentConfig>,
+                ...updates,
               },
             }
           : node

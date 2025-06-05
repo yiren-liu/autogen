@@ -1,12 +1,99 @@
 # Graph Builder Implementation
 
+## Mistake: updateNode Function Type Mismatch
+**Wrong**:
+```
+// Interface and implementation had type mismatch
+updateNode: (nodeId: string, config: ComponentConfig) => void;
+
+updateNode: (nodeId, config) => {
+  // This was casting config incorrectly, causing data corruption
+  component: config as Component<ComponentConfig>,
+}
+```
+
+**Correct**:
+```
+// Fixed interface to accept partial updates
+updateNode: (nodeId: string, updates: Partial<{ component: Component<ComponentConfig> }>) => void;
+
+updateNode: (nodeId, updates) => {
+  // Properly spread updates into data
+  data: {
+    ...node.data,
+    ...updates,
+  },
+}
+```
+
 ## TODO items
 - Migrate Builder components to GraphBuilder components (Done)
 - Simplify node interface in graph builder mode (Done)
 - Allow node in graph builder mode to be able to connect to each other (Done)
-- Fix edit component drawer in graph builder mode
-- 
+- Fix edit component drawer in graph builder mode (Done)
+- Integrate component editor and test drawer as side panels (Done)
 
+## Integrated Panel Implementation
+
+### Right Panel Integration
+- Replaced overlay drawers with integrated side panel in GraphBuilder
+- Used state management with `rightPanelMode` enum: 'none', 'component', 'test'
+- Added smooth width transitions with CSS transitions
+- Panel width: 400px when open, 0px when closed
+
+### Layout Structure
+- Main content area uses `calc(100% - ${rightPanelWidth})` for responsive width
+- Right panel positioned using Flexbox layout
+- Panel header with title and close button using Adobe Spectrum components
+- Panel content area with scrollable overflow
+
+### Component Editor Integration
+- Automatically opens when a node is selected (selectedNodeId changes)
+- Uses existing ComponentEditor component without modifications
+- Maintains navigation and editing functionality
+- Auto-saves changes when component is updated
+
+### Test Drawer Integration  
+- Converted from Ant Design Drawer to embedded View component
+- Replaced message notifications with AlertDialog error handling
+- Removed drawer wrapper and converted to standard component layout
+- Maintains session creation and cleanup functionality
+- Checkbox control for delete-on-close behavior integrated into panel
+
+### User Experience Improvements
+- Unified workspace: graph, editing, and testing in same view
+- No modal overlays disrupting workflow
+- Smooth transitions between panel states
+- Consistent Adobe Spectrum styling throughout
+- Close button (X icon) in panel header for intuitive closing
+
+### Technical Implementation
+- Panel mode controlled by `rightPanelMode` state
+- Automatic opening when nodes selected via useEffect
+- Width calculation using CSS calc() for responsive behavior
+- Error handling with Adobe Spectrum AlertDialog
+- Proper cleanup of resources when panels are closed
+
+### Scroll Container Fixes
+- Fixed double scrollbars by removing nested overflow containers
+- Used flexbox layout with `flex: 1, minHeight: 0` for proper scrolling
+- Panel content height calculated as `calc(100% - 60px)` to account for header
+- ComponentEditor and TestDrawer converted to non-nested scroll containers
+- Removed Cancel/Save buttons from ComponentEditor (auto-saves on change)
+- Fixed bottom gap issue with proper flex layout structure
+
+### Auto-Save Implementation (Local State)
+- Added auto-save functionality to ComponentEditor with 1-second delay for LOCAL changes
+- Save status tracking: 'saved', 'saving', 'unsaved' states for local graph state
+- Visual save status indicator in component header with colored badges:
+  - Green "Saved" badge with check icon (changes saved to local graph state)
+  - Yellow "Saving..." badge (during local save process)
+  - Red "Unsaved" badge (when changes are pending locally)
+- Auto-save updates local graph state only (not API save)
+- API save is separate and triggered by main Save button in toolbar
+- Tooltip clarifies: "Changes saved locally (use main Save button to persist)"
+- Fixed debounced save implementation to prevent timeout cancellation issues
+- Proper cleanup of debounced function on component unmount
 
 ## Key Components Created
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { 
   Button, 
   Breadcrumbs, 
@@ -11,7 +11,7 @@ import {
   AlertDialog,
   DialogTrigger
 } from "@adobe/react-spectrum";
-import { ChevronLeft, Code, FormInput, PlayCircle } from "lucide-react";
+import { ChevronLeft, Code, FormInput, PlayCircle, Check } from "lucide-react";
 import { Component, ComponentConfig } from "../../../../types/datamodel";
 import {
   isTeamComponent,
@@ -60,6 +60,7 @@ export const ComponentEditor: React.FC<ComponentEditorProps> = ({
     null
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
 
   const editorRef = useRef(null);
 
@@ -68,7 +69,32 @@ export const ComponentEditor: React.FC<ComponentEditorProps> = ({
     setWorkingCopy(component);
     setEditPath([]);
     setTestResult(null);
+    setSaveStatus('saved');
   }, [component]);
+
+  // Debounced local save function
+  const debouncedLocalSave = useCallback(
+    debounce((componentToSave: Component<ComponentConfig>) => {
+      onChange(componentToSave); // This updates the local graph state
+      setSaveStatus('saved');
+    }, 1000),
+    [onChange]
+  );
+
+  // Auto-save effect
+  useEffect(() => {
+    if (saveStatus === 'unsaved') {
+      setSaveStatus('saving');
+      debouncedLocalSave(workingCopy);
+    }
+  }, [saveStatus, debouncedLocalSave, workingCopy]);
+
+  // Cleanup debounced function on unmount
+  useEffect(() => {
+    return () => {
+      debouncedLocalSave.cancel();
+    };
+  }, [debouncedLocalSave]);
 
   const getCurrentComponent = useCallback(
     (root: Component<ComponentConfig>) => {
@@ -194,6 +220,7 @@ export const ComponentEditor: React.FC<ComponentEditorProps> = ({
       );
 
       setWorkingCopy(updatedComponent);
+      setSaveStatus('unsaved');
     },
     [workingCopy, editPath, updateComponentAtPath]
   );
@@ -223,6 +250,7 @@ export const ComponentEditor: React.FC<ComponentEditorProps> = ({
       try {
         const updatedComponent = JSON.parse(value);
         setWorkingCopy(updatedComponent);
+        setSaveStatus('unsaved');
       } catch (err) {
         console.error("Invalid JSON", err);
       }
@@ -322,7 +350,7 @@ export const ComponentEditor: React.FC<ComponentEditorProps> = ({
   const showTestButton = isModelComponent(currentComponent);
 
   return (
-    <View height="100%" UNSAFE_className="flex flex-col">
+    <View UNSAFE_style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {errorMessage && (
         <View UNSAFE_className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
           <Flex justifyContent="space-between" alignItems="center">
@@ -337,68 +365,97 @@ export const ComponentEditor: React.FC<ComponentEditorProps> = ({
         </View>
       )}
 
-      <Flex gap="size-200" alignItems="center" marginBottom="size-300">
-        {navigationDepth && editPath.length > 0 && (
-          <ActionButton
-            onPress={handleNavigateBack}
-            aria-label="Navigate back"
-          >
-            <ChevronLeft size={16} />
-          </ActionButton>
-        )}
-        <View flex>
-          <Breadcrumbs>
-            {breadcrumbItems.map((item) => (
-              <Item key={item.id}>{item.label}</Item>
-            ))}
-          </Breadcrumbs>
-        </View>
-
-        {/* Test Component Button */}
-        {showTestButton && (
-          <TooltipTrigger>
+      <View UNSAFE_style={{ flexShrink: 0, marginBottom: '16px' }}>
+        <Flex gap="size-200" alignItems="center">
+          {navigationDepth && editPath.length > 0 && (
             <ActionButton
-              onPress={handleTestComponent}
-              isDisabled={testLoading}
+              onPress={handleNavigateBack}
+              aria-label="Navigate back"
             >
-              <View UNSAFE_className="relative">
-                <PlayCircle size={16} />
-                {testResult && (
-                  <View
-                    UNSAFE_className={`absolute top-0 right-0 w-2 h-2 ${
-                      testResult.status ? "bg-green-500" : "bg-red-500"
-                    } rounded-full`}
-                  />
-                )}
-              </View>
-              <span className="ml-1">Test</span>
+              <ChevronLeft size={16} />
             </ActionButton>
-            <Tooltip>Test Component</Tooltip>
-          </TooltipTrigger>
-        )}
-
-        <ActionButton
-          onPress={() => setIsJsonEditing((prev) => !prev)}
-        >
-          {isJsonEditing ? (
-            <>
-              <FormInput size={16} />
-              <span className="ml-1">Form Editor</span>
-            </>
-          ) : (
-            <>
-              <Code size={16} />
-              <span className="ml-1">JSON Editor</span>
-            </>
           )}
-        </ActionButton>
-      </Flex>
+          <View flex>
+            <Flex direction="row" alignItems="center" gap="size-100">
+              <Breadcrumbs>
+                {breadcrumbItems.map((item) => (
+                  <Item key={item.id}>{item.label}</Item>
+                ))}
+              </Breadcrumbs>
+              
+              {/* Save status indicator */}
+              {saveStatus !== 'saved' ? (
+                <View UNSAFE_className="flex items-center">
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    saveStatus === 'saving' 
+                      ? 'bg-yellow-100 text-yellow-700' 
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {saveStatus === 'saving' ? 'Saving...' : 'Unsaved'}
+                  </span>
+                </View>
+              ) : (
+                                  <TooltipTrigger>
+                    <View UNSAFE_className="flex items-center">
+                      <View UNSAFE_className="flex items-center text-xs px-2 py-1 rounded bg-green-100 text-green-700">
+                        <Check size={12} />
+                        <span className="ml-1">Saved</span>
+                      </View>
+                    </View>
+                    <Tooltip>Changes saved locally (use main Save button to persist)</Tooltip>
+                  </TooltipTrigger>
+              )}
+            </Flex>
+          </View>
+
+          {/* Test Component Button */}
+          {showTestButton && (
+            <TooltipTrigger>
+              <ActionButton
+                onPress={handleTestComponent}
+                isDisabled={testLoading}
+              >
+                <View UNSAFE_className="relative">
+                  <PlayCircle size={16} />
+                  {testResult && (
+                    <View
+                      UNSAFE_className={`absolute top-0 right-0 w-2 h-2 ${
+                        testResult.status ? "bg-green-500" : "bg-red-500"
+                      } rounded-full`}
+                    />
+                  )}
+                </View>
+                <span className="ml-1">Test</span>
+              </ActionButton>
+              <Tooltip>Test Component</Tooltip>
+            </TooltipTrigger>
+          )}
+
+          <ActionButton
+            onPress={() => setIsJsonEditing((prev) => !prev)}
+          >
+            {isJsonEditing ? (
+              <>
+                <FormInput size={16} />
+                <span className="ml-1">Form Editor</span>
+              </>
+            ) : (
+              <>
+                <Code size={16} />
+                <span className="ml-1">JSON Editor</span>
+              </>
+            )}
+          </ActionButton>
+        </Flex>
+      </View>
 
       {testResult && (
-        <TestDetails result={testResult} onClose={() => setTestResult(null)} />
+        <View UNSAFE_style={{ flexShrink: 0, marginBottom: '16px' }}>
+          <TestDetails result={testResult} onClose={() => setTestResult(null)} />
+        </View>
       )}
 
-      <View flex overflow="auto">
+      <View UNSAFE_style={{ flex: 1, minHeight: 0 }}>
         {isJsonEditing ? (
           <MonacoEditor
             editorRef={editorRef}
@@ -411,22 +468,6 @@ export const ComponentEditor: React.FC<ComponentEditorProps> = ({
           renderFields()
         )}
       </View>
-
-      {onClose && (
-        <Flex 
-          justifyContent="end" 
-          gap="size-200" 
-          marginTop="size-300" 
-          UNSAFE_className="pt-4 border-t border-secondary"
-        >
-          <Button variant="secondary" onPress={onClose}>
-            Cancel
-          </Button>
-          <Button variant="cta" onPress={handleSave}>
-            Save Changes
-          </Button>
-        </Flex>
-      )}
     </View>
   );
 };
