@@ -1,5 +1,13 @@
 # Graph Builder Implementation
 
+## TODO items
+- Migrate Builder components to GraphBuilder components (Done)
+- Simplify node interface in graph builder mode (Done)
+- Allow node in graph builder mode to be able to connect to each other (Done)
+- Fix edit component drawer in graph builder mode
+- 
+
+
 ## Key Components Created
 
 ### Data Model Changes
@@ -64,6 +72,69 @@ graph-builder/
 - Fixed component config type errors in store by using `(config as any)?.name`
 - Handled union types properly when accessing agent name properties
 - Used type assertions for ComponentConfig access patterns
+
+## Simplified Node Interface Implementation
+
+### Node Design Simplification
+- Created unified `SimpleNode` component replacing complex `TeamNode` and `AgentNode`
+- Removed complex sections (Model, Tools, Agents, Terminations dropzones)
+- Made nodes more compact with cleaner interface
+- Added color coding by node type for better visual distinction
+- Used status badges instead of complex nested sections
+
+### Node Features
+- Simplified to show: Icon, Name, Type Subtitle, Description, Status Badges
+- Width reduced to 256px (w-64) for more compact layout
+- Color-coded borders and headers by node type:
+  - Graph: Purple (#8B5CF6)
+  - Team: Blue (#3B82F6)
+  - Agent: Green (#10B981)
+  - Model: Amber (#F59E0B)
+  - Tool: Red (#EF4444)
+  - Termination: Gray (#6B7280)
+
+### Connection Implementation
+- Added source and target handles to all node types
+- Handles positioned on left (target) and right (source) sides
+- Updated `onConnect` to allow connections between all node types
+- All connections use "graph-connection" edge type
+- Added history tracking for undo/redo support
+
+### Styling Improvements
+- Created `graph-builder.css` for graph-specific styles
+- Styled handles with hover effects and transitions
+- Added connection line styling while dragging
+- Improved edge hover and selection states
+- Added smooth transitions for all interactive elements
+
+### Helper Functions Created
+- `getNodeColor()`: Returns color based on node type
+- `getNodeSubtitle()`: Provides descriptive subtitle for each node type
+- `getNodeBadges()`: Shows relevant status information as compact badges
+
+## Bidirectional Edge Implementation
+
+### Edge Rendering Logic
+- Detects when two nodes have edges pointing to each other (immediate cycles)
+- Renders a single edge with arrows on both ends instead of two separate edges
+- Prevents duplicate edges when bidirectional connection already exists
+
+### Implementation Details
+1. **BidirectionalEdge Component**: Created custom edge component with markers on both ends
+2. **Edge Type**: Added "bidirectional" to EdgeTypes enum
+3. **Connection Logic**: Updated `onConnect` in graphbuilder to:
+   - Check for existing reverse edges
+   - Replace two unidirectional edges with one bidirectional edge
+   - Prevent duplicate connections
+4. **Store Updates**:
+   - `graphToVisualElements`: Detects bidirectional connections when loading
+   - `visualElementsToGraph`: Properly saves bidirectional edges as two entries
+   - Uses Set to track processed pairs to avoid duplicates
+
+### Visual Improvements
+- Bidirectional edges show arrows on both ends using SVG markers
+- Consistent hover and selection styling
+- Cleaner graph visualization with fewer overlapping edges
 
 ## Adobe Spectrum Overhaul
 

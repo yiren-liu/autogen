@@ -26,7 +26,8 @@ export type EdgeTypes =
   | "tool-connection"
   | "agent-connection"
   | "team-connection"
-  | "termination-connection";
+  | "termination-connection"
+  | "bidirectional";
 
 export interface CustomEdge extends Edge {
   type: EdgeTypes;

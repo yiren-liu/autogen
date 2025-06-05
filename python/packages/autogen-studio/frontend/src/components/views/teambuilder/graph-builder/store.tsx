@@ -121,21 +121,43 @@ const graphToVisualElements = (component: Component<GraphConfig>) => {
 
   // Convert DiGraph edges to visual edges
   const graphConfig = component.config;
+  const processedPairs = new Set<string>();
+  
   if (graphConfig.graph?.nodes) {
     Object.entries(graphConfig.graph.nodes).forEach(([nodeName, graphNode]) => {
       graphNode.edges.forEach((edge, edgeIndex) => {
-        const edgeId = `${nodeName}-${edge.target}-${edgeIndex}`;
         const sourceNodeId = findNodeIdByName(nodes, nodeName);
         const targetNodeId = findNodeIdByName(nodes, edge.target);
         
         if (sourceNodeId && targetNodeId) {
-          edges.push({
-            id: edgeId,
-            source: sourceNodeId,
-            target: targetNodeId,
-            type: "graph-connection",
-            label: edge.condition || undefined,
-          });
+          // Create a normalized pair key for bidirectional detection
+          const pairKey = [sourceNodeId, targetNodeId].sort().join('-');
+          
+          // Check if there's a reverse edge
+          const reverseExists = graphConfig.graph.nodes[edge.target]?.edges.some(
+            reverseEdge => reverseEdge.target === nodeName
+          );
+          
+          if (reverseExists && !processedPairs.has(pairKey)) {
+            // Create bidirectional edge
+            processedPairs.add(pairKey);
+            edges.push({
+              id: `${sourceNodeId}-${targetNodeId}-bidirectional`,
+              source: sourceNodeId,
+              target: targetNodeId,
+              type: "bidirectional",
+              label: edge.condition || undefined,
+            });
+          } else if (!reverseExists && !processedPairs.has(pairKey)) {
+            // Create normal edge
+            edges.push({
+              id: `${nodeName}-${edge.target}-${edgeIndex}`,
+              source: sourceNodeId,
+              target: targetNodeId,
+              type: "graph-connection",
+              label: edge.condition || undefined,
+            });
+          }
         }
       });
     });
@@ -195,11 +217,29 @@ const visualElementsToGraph = (nodes: CustomNode[], edges: CustomEdge[]): Compon
       const sourceName = (sourceNode.data.component.config as any)?.name || sourceNode.data.component.label || "unknown";
       const targetName = (targetNode.data.component.config as any)?.name || targetNode.data.component.label || "unknown";
       
-      if (diGraphNodes[sourceName]) {
-        diGraphNodes[sourceName].edges.push({
-          target: targetName,
-          condition: edge.label as string || undefined
-        });
+      // Handle bidirectional edges
+      if (edge.type === "bidirectional") {
+        // Add edge in both directions
+        if (diGraphNodes[sourceName]) {
+          diGraphNodes[sourceName].edges.push({
+            target: targetName,
+            condition: edge.label as string || undefined
+          });
+        }
+        if (diGraphNodes[targetName]) {
+          diGraphNodes[targetName].edges.push({
+            target: sourceName,
+            condition: edge.label as string || undefined
+          });
+        }
+      } else {
+        // Normal unidirectional edge
+        if (diGraphNodes[sourceName]) {
+          diGraphNodes[sourceName].edges.push({
+            target: targetName,
+            condition: edge.label as string || undefined
+          });
+        }
       }
     }
   });
@@ -409,7 +449,7 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
       
       const dagreGraph = new dagre.graphlib.Graph();
       dagreGraph.setDefaultEdgeLabel(() => ({}));
-      dagreGraph.setGraph({ rankdir: "TB" });
+      dagreGraph.setGraph({ rankdir: "LR", ranker: "tight-tree", ranksep: 200, nodesep: 100 });
 
       nodes.forEach((node) => {
         dagreGraph.setNode(node.id, { width: 200, height: 100 });

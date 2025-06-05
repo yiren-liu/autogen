@@ -5,13 +5,14 @@ import {
   NodeProps,
   EdgeProps,
   getBezierPath,
+  getSmoothStepPath,
   BaseEdge,
 } from "@xyflow/react";
 import {
   LucideIcon,
   Users,
   Wrench,
-  Brain,
+  Brain,    
   Timer,
   Trash2Icon,
   Edit,
@@ -198,254 +199,197 @@ const ConnectionBadge: React.FC<{
   </span>
 );
 
-// Team Node
-export const TeamNode = memo<NodeProps<CustomNode>>((props) => {
-  const component = props.data.component as Component<TeamConfig>;
-  const hasModel = isSelectorTeam(component) && !!component.config.model_client;
-  const participantCount = component.config.participants?.length || 0;
-
-  return (
-    <BaseNode
-      {...props}
-      icon={iconMap.team}
-      headerContent={
-        <div className="flex gap-2 mt-2">
-          <ConnectionBadge connected={hasModel} label="Model" />
-          <ConnectionBadge
-            connected={participantCount > 0}
-            label={`${participantCount} Agent${
-              participantCount > 1 ? "s" : ""
-            }`}
-          />
-        </div>
-      }
-      descriptionContent={
-        <div>
-          <div>
-            <TruncatableText
-              content={component.description || component.label || ""}
-              textThreshold={150}
-              showFullscreen={false}
-            />
-          </div>
-          {isSelectorTeam(component) && component.config.selector_prompt && (
-            <div className="mt-1 text-xs">
-              Selector:{" "}
-              <TruncatableText
-                content={component.config.selector_prompt}
-                textThreshold={150}
-                showFullscreen={false}
-              />
-            </div>
-          )}
-        </div>
-      }
-    >
-      {isSelectorTeam(component) && (
-        <NodeSection title="Model">
-          {/* <Handle
-            type="target"
-            position={Position.Left}
-            id={`${props.id}-model-input-handle`}
-            className="my-left-handle"
-          /> */}
-
-          <div className="relative">
-            {hasModel && (
-              <div className="text-sm">
-                {component.config.model_client.config.model}
-              </div>
-            )}
-            <DroppableZone id={`${props.id}@@@model-zone`} accepts={["model"]}>
-              <div className="text-secondary text-xs my-1 text-center">
-                Drop model here
-              </div>
-            </DroppableZone>
-          </div>
-        </NodeSection>
-      )}
-
-      <NodeSection
-        title={
-          <div>
-            Agents{" "}
-            <span className="text-xs text-accent">({participantCount})</span>
-          </div>
-        }
-      >
-        <Handle
-          type="source"
-          position={Position.Right}
-          id={`${props.id}-agent-output-handle`}
-          className="my-right-handle"
-        />
-        <div className="space-y-1">
-          {component.config.participants?.map((participant, index) => (
-            <div
-              key={index}
-              className="relative text-sm py-1 px-2 bg-white rounded flex items-center gap-2"
-            >
-              <Brain className="w-4 h-4 text-gray-500" />
-              <span>{participant.config.name}</span>
-            </div>
-          ))}
-          <DroppableZone id={`${props.id}@@@agent-zone`} accepts={["agent"]}>
-            <div className="text-secondary text-xs my-1 text-center">
-              Drop agents here
-            </div>
-          </DroppableZone>
-        </div>
-      </NodeSection>
-
-      <NodeSection title="Terminations">
-        {/* {
-          <Handle
-            type="target"
-            position={Position.Left}
-            id={`${props.id}-termination-input-handle`}
-            className="my-left-handle"
-          />
-        } */}
-        <div className="space-y-1">
-          {component.config.termination_condition && (
-            <div className="text-sm py-1 px-2 bg-white rounded flex items-center gap-2">
-              <Timer className="w-4 h-4 text-gray-500" />
-              <span>
-                {component.config.termination_condition.label ||
-                  component.config.termination_condition.component_type}
-              </span>
-            </div>
-          )}
-          <DroppableZone
-            id={`${props.id}@@@termination-zone`}
-            accepts={["termination"]}
-          >
-            <div className="text-secondary text-xs my-1 text-center">
-              Drop termination here
-            </div>
-          </DroppableZone>
-        </div>
-      </NodeSection>
-    </BaseNode>
+// Simplified Node Component
+export const SimpleNode = memo<NodeProps<CustomNode>>((props) => {
+  const { id, data, selected, dragHandle } = props;
+  const deleteNode = useGraphBuilderStore((state) => state.deleteNode);
+  const setSelectedNode = useGraphBuilderStore(
+    (state) => state.setSelectedNode
   );
-});
-
-TeamNode.displayName = "TeamNode";
-
-export const AgentNode = memo<NodeProps<CustomNode>>((props) => {
-  const component = props.data.component as Component<AgentConfig>;
-  const hasModel =
-    isAssistantAgent(component) && !!component.config.model_client;
-  const toolCount = isAssistantAgent(component)
-    ? component.config.tools?.length || 0
-    : 0;
+  
+  const component = data.component;
+  const Icon = iconMap[component.component_type] || Bot;
+  const showDelete = data.type !== "graph"; // Don't allow deleting the main graph node
+  
+  // Get node-specific info
+  const nodeInfo = {
+    name: (component.config as any)?.name || component.label || "Unnamed",
+    subtitle: getNodeSubtitle(component),
+    color: getNodeColor(component.component_type),
+  };
 
   return (
-    <BaseNode
-      {...props}
-      icon={iconMap.agent}
-      headerContent={
-        <div className="flex gap-2 mt-2">
-          {isAssistantAgent(component) && (
-            <>
-              <ConnectionBadge connected={hasModel} label="Model" />
-              <ConnectionBadge
-                connected={toolCount > 0}
-                label={`${toolCount} Tools`}
-              />
-            </>
-          )}
-        </div>
-      }
-      descriptionContent={
-        <div>
-          <div className="break-words truncate mb-1">
-            {" "}
-            {component.config.name}
-          </div>
-          <div className="break-words"> {component.description}</div>
-        </div>
-      }
+    <div
+      ref={dragHandle}
+      className={`
+        bg-white text-primary relative rounded-lg shadow-sm border-2 w-64
+        ${selected ? "border-accent shadow-lg" : "border-gray-200"}
+        hover:shadow-md transition-all duration-200 cursor-pointer
+      `}
+      style={{ borderColor: selected ? undefined : nodeInfo.color }}
     >
+      {/* Source handle - for outgoing connections */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id={`${id}-source`}
+        className="!bg-gray-400 !w-3 !h-3 hover:!bg-accent transition-colors"
+        style={{ right: -8 }}
+      />
+      
+      {/* Target handle - for incoming connections */}
       <Handle
         type="target"
         position={Position.Left}
-        id={`${props.id}-agent-input-handle`}
-        className="my-left-handle z-100"
+        id={`${id}-target`}
+        className="!bg-gray-400 !w-3 !h-3 hover:!bg-accent transition-colors"
+        style={{ left: -8 }}
       />
 
-      {(isAssistantAgent(component) || isWebSurferAgent(component)) && (
-        <>
-          <NodeSection title="Model">
-            {/* <Handle
-              type="target"
-              position={Position.Left}
-              id={`${props.id}-model-input-handle`}
-              className="my-left-handle"
-            /> */}
-
-            <div className="relative">
-              {component.config?.model_client && (
-                <div className="text-sm">
-                  {component.config?.model_client.config?.model}
+      {/* Header */}
+      <div 
+        className="p-3 rounded-t-lg"
+        style={{ backgroundColor: `${nodeInfo.color}15` }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Icon 
+              className="flex-shrink-0 w-5 h-5"
+              style={{ color: nodeInfo.color }}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-gray-800 truncate text-sm">
+                {nodeInfo.name}
+              </div>
+              {nodeInfo.subtitle && (
+                <div className="text-xs text-gray-500 truncate">
+                  {nodeInfo.subtitle}
                 </div>
               )}
-              <DroppableZone
-                id={`${props.id}@@@model-zone`}
-                accepts={["model"]}
-              >
-                <div className="text-secondary text-xs my-1 text-center">
-                  Drop model here
-                </div>
-              </DroppableZone>
             </div>
-          </NodeSection>
+          </div>
+          
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNode(id);
+              }}
+              className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+            >
+              <Edit className="w-3.5 h-3.5 text-gray-600" />
+            </button>
+            {showDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteNode(id);
+                }}
+                className="p-1.5 hover:bg-red-100 rounded transition-colors"
+              >
+                <Trash2Icon className="w-3.5 h-3.5 text-red-500" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
-          {isAssistantAgent(component) && (
-            <NodeSection title="Tools">
-              {/* <Handle
-              type="target"
-              position={Position.Left}
-              id={`${props.id}-tool-input-handle`}
-              className="my-left-handle"
-            /> */}
-              <div className="space-y-1">
-                {component.config.tools && toolCount > 0 && (
-                  <div className="space-y-1">
-                    {component.config.tools.map((tool, index) => (
-                      <div
-                        key={index}
-                        className="relative text-sm py-1 px-2 bg-white rounded flex items-center gap-2"
-                      >
-                        <Wrench className="w-4 h-4 text-gray-500" />
-                        <span>{tool.config.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <DroppableZone
-                  id={`${props.id}@@@tool-zone`}
-                  accepts={["tool"]}
-                >
-                  <div className="text-secondary text-xs my-1 text-center">
-                    Drop tools here
-                  </div>
-                </DroppableZone>
-              </div>
-            </NodeSection>
-          )}
-        </>
+      {/* Content */}
+      {component.description && (
+        <div className="px-3 py-2 border-t border-gray-100">
+          <TruncatableText
+            content={component.description}
+            textThreshold={80}
+            showFullscreen={false}
+            className="text-xs text-gray-600"
+          />
+        </div>
       )}
-    </BaseNode>
+      
+      {/* Status badges */}
+      <div className="px-3 pb-2 pt-1">
+        <div className="flex flex-wrap gap-1">
+          {getNodeBadges(component).map((badge, index) => (
+            <span
+              key={index}
+              className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600"
+            >
+              {badge}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 });
 
-AgentNode.displayName = "AgentNode";
+SimpleNode.displayName = "SimpleNode";
 
-// Export all node types
+// Helper functions
+function getNodeColor(type: ComponentTypes): string {
+  const colors: Record<ComponentTypes, string> = {
+    graph: "#8B5CF6", // Purple
+    team: "#3B82F6",  // Blue
+    agent: "#10B981", // Green
+    model: "#F59E0B", // Amber
+    tool: "#EF4444",  // Red
+    termination: "#6B7280", // Gray
+  };
+  return colors[type] || "#6B7280";
+}
+
+function getNodeSubtitle(component: Component<ComponentConfig>): string {
+  switch (component.component_type) {
+    case "agent":
+      return isAssistantAgent(component) ? "Assistant Agent" : 
+             isWebSurferAgent(component) ? "Web Surfer Agent" : "Agent";
+    case "team":
+      return isSelectorTeam(component) ? "Selector Team" : "Team";
+    case "model":
+      return (component.config as any)?.model || "Model";
+    case "tool":
+      return "Tool";
+    case "termination":
+      return "Termination Condition";
+    case "graph":
+      return "Graph Flow";
+    default:
+      return component.component_type;
+  }
+}
+
+function getNodeBadges(component: Component<ComponentConfig>): string[] {
+  const badges: string[] = [];
+  
+  if (component.component_type === "agent" && isAssistantAgent(component)) {
+    if (component.config.model_client) {
+      badges.push(component.config.model_client.config.model);
+    }
+    if (component.config.tools?.length) {
+      badges.push(`${component.config.tools.length} Tools`);
+    }
+  } else if (component.component_type === "team") {
+    const team = component as Component<TeamConfig>;
+    if (team.config.participants?.length) {
+      badges.push(`${team.config.participants.length} Agents`);
+    }
+    if (isSelectorTeam(team) && team.config.model_client) {
+      badges.push(team.config.model_client.config.model);
+    }
+  }
+  
+  return badges;
+}
+
+// Export all node types using the same SimpleNode component
 export const nodeTypes = {
-  team: TeamNode,
-  agent: AgentNode,
+  team: SimpleNode,
+  agent: SimpleNode,
+  graph: SimpleNode,
+  model: SimpleNode,
+  tool: SimpleNode,
+  termination: SimpleNode,
+  custom: SimpleNode, // For any custom nodes
 };
 
 const EDGE_STYLES = {
@@ -454,6 +398,7 @@ const EDGE_STYLES = {
   "tool-connection": { stroke: "rgb(220,220,220)" },
   "agent-connection": { stroke: "rgb(220,220,220)" },
   "termination-connection": { stroke: "rgb(220,220,220)" },
+  "bidirectional": { stroke: "rgb(220,220,220)" },
 } as const;
 
 type EdgeType = keyof typeof EDGE_STYLES;
@@ -494,10 +439,89 @@ export const CustomEdge = ({
   );
 };
 
+// Bidirectional edge component with arrows on both ends
+export const BidirectionalEdge = ({
+  type,
+  data,
+  deletable,
+  ...props
+}: CustomEdgeProps) => {
+  const [edgePath] = getBezierPath(props);
+  const edgeType = type || "graph-connection";
+
+  // Extract only the SVG path properties we want to pass
+  const { style: baseStyle, ...pathProps } = props;
+  const {
+    // Filter out the problematic props
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetPosition,
+    sourceHandleId,
+    targetHandleId,
+    pathOptions,
+    selectable,
+    ...validPathProps
+  } = pathProps;
+
+  // Create unique marker IDs for this edge
+  const startMarkerId = `bidirectional-start-${props.id}`;
+  const endMarkerId = `bidirectional-end-${props.id}`;
+
+  return (
+    <>
+      <defs>
+        {/* Arrow pointing backwards (for start of line) */}
+        <marker
+          id={startMarkerId}
+          markerWidth="10"
+          markerHeight="10"
+          refX="1"
+          refY="5"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path
+            d="M 10 0 L 0 5 L 10 10 z"
+            fill={EDGE_STYLES[edgeType as EdgeType].stroke}
+          />
+        </marker>
+        {/* Arrow pointing forwards (for end of line) */}
+        <marker
+          id={endMarkerId}
+          markerWidth="10"
+          markerHeight="10"
+          refX="9"
+          refY="5"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path
+            d="M 0 0 L 10 5 L 0 10 z"
+            fill={EDGE_STYLES[edgeType as EdgeType].stroke}
+          />
+        </marker>
+      </defs>
+      <BaseEdge
+        path={edgePath}
+        style={{ 
+          ...EDGE_STYLES[edgeType as EdgeType], 
+          strokeWidth: 2,
+          markerStart: `url(#${startMarkerId})`,
+          markerEnd: `url(#${endMarkerId})`
+        }}
+        className="react-flow__edge-bidirectional"
+        {...validPathProps}
+      />
+    </>
+  );
+};
+
 export const edgeTypes = {
   "graph-connection": CustomEdge,
   "model-connection": CustomEdge,
   "tool-connection": CustomEdge,
   "agent-connection": CustomEdge,
   "termination-connection": CustomEdge,
+  "bidirectional": BidirectionalEdge,
 }; 

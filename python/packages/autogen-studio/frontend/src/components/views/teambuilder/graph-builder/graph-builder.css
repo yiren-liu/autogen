@@ -1,0 +1,85 @@
+/* Graph Builder Styles */
+
+/* ReactFlow wrapper */
+.reactflow-wrapper {
+  @apply h-full w-full;
+}
+
+/* Connection handles */
+.react-flow__handle {
+  @apply !w-3 !h-3 !bg-gray-400 !border-gray-600 hover:!bg-accent transition-colors cursor-pointer;
+}
+
+.react-flow__handle.connecting {
+  @apply !bg-accent;
+}
+
+/* Edge styles */
+.react-flow__edge-path {
+  @apply stroke-gray-400 stroke-2 hover:stroke-accent transition-colors;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  @apply stroke-accent;
+}
+
+/* Bidirectional edge marker styling */
+.react-flow__edge-bidirectional marker {
+  @apply fill-gray-400;
+}
+
+.react-flow__edge-bidirectional:hover marker {
+  @apply fill-accent;
+}
+
+.react-flow__edge-bidirectional.selected marker {
+  @apply fill-accent;
+}
+
+/* Node selection */
+.react-flow__node.selected {
+  @apply shadow-lg;
+}
+
+/* Smooth transitions for nodes */
+/* .react-flow__node {
+  @apply transition-all duration-200;
+} */
+
+/* Connection line while dragging */
+.react-flow__connection {
+  @apply stroke-accent stroke-2;
+}
+
+.react-flow__connection-path {
+  @apply stroke-accent stroke-2 fill-none;
+}
+
+/* Node hover effects */
+.react-flow__node:hover {
+  @apply z-10;
+}
+
+/* Minimap styling */
+.react-flow__minimap {
+  @apply bg-gray-100 rounded-lg shadow-md;
+}
+
+/* Background pattern */
+.react-flow__background pattern circle {
+  @apply fill-gray-300;
+}
+
+/* Controls */
+.react-flow__controls {
+  @apply shadow-md rounded-lg;
+}
+
+.react-flow__controls-button {
+  @apply hover:bg-gray-100;
+}
+
+/* Attribution hiding (optional) */
+.react-flow__attribution {
+  @apply hidden;
+} 

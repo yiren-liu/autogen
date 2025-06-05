@@ -52,12 +52,14 @@ import ComponentEditor from "./component-editor/component-editor";
 
 // import builder css
 import "../builder/builder.css";
+import "./graph-builder.css";
 import GraphBuilderToolbar from "./toolbar";
 import { MonacoEditor } from "../../monaco";
 import debounce from "lodash.debounce";
 import TestDrawer from "./testdrawer";
 import { validationAPI, ValidationResponse } from "../api";
 import { ValidationErrors } from "../builder/validationerrors";
+import { Drawer } from "antd";
 
 interface DragItemData {
   type: ComponentTypes;
@@ -123,8 +125,51 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
   const canRedo = currentHistoryIndex < history.length - 1;
 
   const onConnect = useCallback(
-    (params: Connection) =>
-      setEdges((eds: CustomEdge[]) => addEdge(params, eds)),
+    (params: Connection) => {
+      setEdges((eds: CustomEdge[]) => {
+        // Check for existing reverse connection
+        const reverseEdge = eds.find(
+          (e) => e.source === params.target && e.target === params.source
+        );
+
+        if (reverseEdge) {
+          // Remove the reverse edge and create a bidirectional edge
+          const filteredEdges = eds.filter((e) => e.id !== reverseEdge.id);
+          const bidirectionalEdge: CustomEdge = {
+            ...params,
+            id: `${params.source}-${params.target}-bidirectional`,
+            type: "bidirectional",
+          } as CustomEdge;
+          
+          return addEdge(bidirectionalEdge, filteredEdges);
+        } else {
+          // Check if there's already a bidirectional edge
+          const existingBidirectional = eds.find(
+            (e) => 
+              e.type === "bidirectional" && 
+              ((e.source === params.source && e.target === params.target) ||
+               (e.source === params.target && e.target === params.source))
+          );
+          
+          if (existingBidirectional) {
+            // Don't add duplicate edge if bidirectional already exists
+            return eds;
+          }
+          
+          // Create a normal edge
+          const newEdge: CustomEdge = {
+            ...params,
+            id: `${params.source}-${params.target}`,
+            type: "graph-connection",
+          } as CustomEdge;
+          
+          return addEdge(newEdge, eds);
+        }
+      });
+      
+      // Add to history for undo/redo
+      useGraphBuilderStore.getState().addToHistory();
+    },
     [setEdges]
   );
 
@@ -523,6 +568,35 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
               </View>
             </View>
           </View>
+          {selectedNodeId && (
+            <Drawer
+              title="Edit Component"
+              placement="right"
+              size="large"
+              onClose={() => setSelectedNode(null)}
+              open={!!selectedNodeId}
+              className="component-editor-drawer"
+            >
+              {nodes.find((n) => n.id === selectedNodeId)?.data.component && (
+                <ComponentEditor
+                  component={
+                    nodes.find((n) => n.id === selectedNodeId)!.data.component
+                  }
+                  onChange={(updatedComponent) => {
+                    // console.log("builder updating component", updatedComponent);
+                    if (selectedNodeId) {
+                      updateNode(selectedNodeId, {
+                        component: updatedComponent,
+                      });
+                      handleSave();
+                    }
+                  }}
+                  onClose={() => setSelectedNode(null)}
+                  navigationDepth={true}
+                />
+              )}
+            </Drawer>
+          )}
         </View>
 
         <DragOverlay>

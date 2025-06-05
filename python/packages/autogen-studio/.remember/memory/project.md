@@ -1,5 +1,12 @@
 # Project Preferences
 
+## Graph Builder Features Implemented
+- Simplified node interface with clean, color-coded design
+- Universal node connections - any node can connect to any other node
+- Bidirectional edge rendering for immediate cycles (shows single edge with arrows on both ends)
+- Visual status badges showing model names instead of generic "Has Model"
+- Smooth transitions and hover effects for better UX
+
 ## Code Architecture Patterns
 - Follow existing teambuilder structure when creating new builders
 - Use Zustand for state management with history support
