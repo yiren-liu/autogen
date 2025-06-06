@@ -207,13 +207,18 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
       );
       setNodes(initialNodes);
       setEdges(initialEdges);
+      
+      // Auto-layout nodes after loading
+      setTimeout(() => {
+        layoutNodes();
+      }, 100); // Small delay to ensure nodes are rendered
     }
     handleValidate();
 
     return () => {
       setValidationResults(null);
     };
-  }, [graph, setNodes, setEdges]);
+  }, [graph, setNodes, setEdges, layoutNodes]);
 
   // Handle JSON changes
   const handleJsonChange = useCallback(

@@ -91,6 +91,11 @@ class TeamManager:
             logger.info("Loading environment variables")
             for var in env_vars:
                 os.environ[var.name] = var.value
+        
+        # If OPENAI_API_BASE is set, set it in the config
+        if "OPENAI_API_BASE" in os.environ:
+            for participant in config["config"]["participants"]:
+                participant["config"]["model_client"]['config']['base_url'] = os.environ["OPENAI_API_BASE"]
 
         self._team = BaseGroupChat.load_component(config)
 

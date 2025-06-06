@@ -202,6 +202,12 @@ const ConnectionBadge: React.FC<{
 // Simplified Node Component
 export const SimpleNode = memo<NodeProps<CustomNode>>((props) => {
   const { id, data, selected, dragHandle } = props;
+  
+  // Don't render graph type nodes
+  if (data.type === "graph") {
+    return null;
+  }
+  
   const deleteNode = useGraphBuilderStore((state) => state.deleteNode);
   const setSelectedNode = useGraphBuilderStore(
     (state) => state.setSelectedNode

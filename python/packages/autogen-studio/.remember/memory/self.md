@@ -32,6 +32,9 @@ updateNode: (nodeId, updates) => {
 - Allow node in graph builder mode to be able to connect to each other (Done)
 - Fix edit component drawer in graph builder mode (Done)
 - Integrate component editor and test drawer as side panels (Done)
+- Design data structures for component --> test suite --> test cases
+- Implement conversational session support for graph workflows
+  - Also support live-rendering + centering similar to Dify
 
 ## Integrated Panel Implementation
 
@@ -197,6 +200,10 @@ graph-builder/
 ### Helper Functions Created
 - `getNodeColor()`: Returns color based on node type
 - `getNodeSubtitle()`: Provides descriptive subtitle for each node type
+
+### Node Rendering Controls
+- Added conditional rendering in `SimpleNode` to skip rendering graph type nodes
+- Graph nodes return `null` to prevent display while maintaining ReactFlow node registry
 - `getNodeBadges()`: Shows relevant status information as compact badges
 
 ## Bidirectional Edge Implementation
@@ -301,3 +308,10 @@ When migrating components from `../builder` to graph-builder directory:
 - `graphbuilder.tsx`: Updated imports from `../builder/*` to `./*`
 - `store.tsx`: Updated import from `../builder/types` to `./types`
 - `nodes.tsx`: Updated store import to use local graph builder store
+
+### Auto-Layout on Graph Load
+- Added automatic layout application whenever graph is loaded/reloaded
+- Uses `setTimeout(() => layoutNodes(), 100)` with small delay to ensure nodes are rendered
+- Triggers after `loadFromJson()` sets initial nodes and edges
+- Updated useEffect dependencies to include `layoutNodes` function
+- Provides clean, organized visual representation automatically on graph load
