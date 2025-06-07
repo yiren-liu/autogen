@@ -319,3 +319,11 @@ When migrating components from `../builder` to graph-builder directory:
 - Triggers after `loadFromJson()` sets initial nodes and edges
 - Updated useEffect dependencies to include `layoutNodes` function
 - Provides clean, organized visual representation automatically on graph load
+
+### Edge Condition Labels Implementation
+- Created EdgeConditionLabel component for displaying and editing edge conditions
+- Shows clickable labels with inline editing (Enter to save, Escape to cancel)
+- Auto-positions labels at edge midpoints using SVG path calculations
+- Supports both CustomEdge and BidirectionalEdge components
+- Uses graph builder store for proper state management and history tracking
+- Fixed: Edge condition changes now properly save when graph is saved (store vs React Flow state sync issue)

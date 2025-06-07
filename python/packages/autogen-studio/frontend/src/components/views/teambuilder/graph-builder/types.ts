@@ -29,8 +29,13 @@ export type EdgeTypes =
   | "termination-connection"
   | "bidirectional";
 
+export interface EdgeData extends Record<string, unknown> {
+  condition?: string;
+}
+
 export interface CustomEdge extends Edge {
   type: EdgeTypes;
+  data?: EdgeData;
 }
 
 export interface Position {

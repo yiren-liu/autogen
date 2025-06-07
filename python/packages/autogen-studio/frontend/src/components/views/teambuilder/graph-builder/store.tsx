@@ -32,6 +32,7 @@ interface GraphBuilderState {
   updateNode: (nodeId: string, updates: Partial<{ component: Component<ComponentConfig> }>) => void;
   deleteNode: (nodeId: string) => void;
   setSelectedNode: (nodeId: string | null) => void;
+  updateEdgeData: (edgeId: string, data: Record<string, any>) => void;
   
   // Graph-specific actions
   addGraphEdge: (sourceId: string, targetId: string, condition?: string) => void;
@@ -146,7 +147,9 @@ const graphToVisualElements = (component: Component<GraphConfig>) => {
               source: sourceNodeId,
               target: targetNodeId,
               type: "bidirectional",
-              label: edge.condition || undefined,
+              data: {
+                condition: edge.condition || undefined,
+              },
             });
           } else if (!reverseExists && !processedPairs.has(pairKey)) {
             // Create normal edge
@@ -155,7 +158,9 @@ const graphToVisualElements = (component: Component<GraphConfig>) => {
               source: sourceNodeId,
               target: targetNodeId,
               type: "graph-connection",
-              label: edge.condition || undefined,
+              data: {
+                condition: edge.condition || undefined,
+              },
             });
           }
         }
@@ -223,13 +228,13 @@ const visualElementsToGraph = (nodes: CustomNode[], edges: CustomEdge[]): Compon
         if (diGraphNodes[sourceName]) {
           diGraphNodes[sourceName].edges.push({
             target: targetName,
-            condition: edge.label as string || undefined
+            condition: edge.data?.condition || undefined
           });
         }
         if (diGraphNodes[targetName]) {
           diGraphNodes[targetName].edges.push({
             target: sourceName,
-            condition: edge.label as string || undefined
+            condition: edge.data?.condition || undefined
           });
         }
       } else {
@@ -237,7 +242,7 @@ const visualElementsToGraph = (nodes: CustomNode[], edges: CustomEdge[]): Compon
         if (diGraphNodes[sourceName]) {
           diGraphNodes[sourceName].edges.push({
             target: targetName,
-            condition: edge.label as string || undefined
+            condition: edge.data?.condition || undefined
           });
         }
       }
@@ -348,6 +353,23 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
 
     setSelectedNode: (nodeId) => set({ selectedNodeId: nodeId }),
 
+    updateEdgeData: (edgeId, data) => {
+      const { edges } = get();
+      const updatedEdges = edges.map(edge => 
+        edge.id === edgeId
+          ? { 
+              ...edge, 
+              data: {
+                ...edge.data,
+                ...data
+              }
+            }
+          : edge
+      );
+      set({ edges: updatedEdges });
+      get().addToHistory();
+    },
+
     addGraphEdge: (sourceId, targetId, condition) => {
       const { edges } = get();
       const newEdge: CustomEdge = {
@@ -355,7 +377,9 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
         source: sourceId,
         target: targetId,
         type: "graph-connection",
-        label: condition,
+        data: {
+          condition: condition,
+        },
       };
       set({ edges: [...edges, newEdge] });
       get().addToHistory();
@@ -374,7 +398,13 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
       const { edges } = get();
       const updatedEdges = edges.map(edge => 
         edge.source === sourceId && edge.target === targetId
-          ? { ...edge, label: condition }
+          ? { 
+              ...edge, 
+              data: {
+                ...edge.data,
+                condition: condition
+              }
+            }
           : edge
       );
       set({ edges: updatedEdges });
@@ -474,6 +504,6 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
 
       set({ nodes: layoutedNodes });
       get().addToHistory();
-    },
+          },
   }))
 );

@@ -82,4 +82,32 @@
 /* Attribution hiding (optional) */
 .react-flow__attribution {
   @apply hidden;
+}
+
+/* Edge condition labels */
+.edge-condition-label {
+  @apply z-50;
+}
+
+.edge-condition-label button {
+  @apply text-xs font-medium;
+}
+
+.edge-condition-label input {
+  @apply focus:ring-2 focus:ring-blue-400 focus:ring-offset-1;
+}
+
+.edge-condition-label div[data-editing="true"] {
+  @apply shadow-lg z-50;
+}
+
+/* Hover effects for condition labels */
+.react-flow__edge:hover + .edge-condition-label,
+.react-flow__edge.selected + .edge-condition-label {
+  @apply opacity-100;
+}
+
+/* Animation for condition label appearance */
+.edge-condition-label {
+  @apply transition-opacity duration-200;
 } 

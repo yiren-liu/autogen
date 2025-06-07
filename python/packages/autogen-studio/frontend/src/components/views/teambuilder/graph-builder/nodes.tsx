@@ -7,6 +7,7 @@ import {
   getBezierPath,
   getSmoothStepPath,
   BaseEdge,
+  EdgeLabelRenderer,
 } from "@xyflow/react";
 import {
   LucideIcon,
@@ -412,6 +413,121 @@ type CustomEdgeProps = EdgeProps & {
   type: EdgeType;
 };
 
+// Component for displaying and editing edge conditions
+interface EdgeConditionLabelProps {
+  edgeId: string;
+  condition?: string;
+  edgePath: string;
+  style?: React.CSSProperties;
+}
+
+const EdgeConditionLabel: React.FC<EdgeConditionLabelProps> = ({
+  edgeId,
+  condition,
+  edgePath,
+  style,
+}) => {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editValue, setEditValue] = React.useState(condition || "");
+  const updateEdgeData = useGraphBuilderStore((state) => state.updateEdgeData);
+
+  // Calculate position along the edge path (middle of the edge)
+  const pathElement = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  pathElement.setAttribute("d", edgePath);
+  const pathLength = pathElement.getTotalLength();
+  const midPoint = pathElement.getPointAtLength(pathLength / 2);
+
+  const handleClick = () => {
+    setIsEditing(true);
+    setEditValue(condition || "");
+  };
+
+  const handleSave = () => {
+    updateEdgeData(edgeId, {
+      condition: editValue.trim() || undefined,
+    });
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditValue(condition || "");
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
+
+  // Don't render anything if no condition and not editing
+  if (!condition && !isEditing) {
+    return (
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            position: "absolute",
+            transform: `translate(-50%, -50%) translate(${midPoint.x}px,${midPoint.y}px)`,
+            pointerEvents: "all",
+            ...style,
+          }}
+          className="edge-condition-label"
+        >
+          <button
+            onClick={handleClick}
+            className="bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer transition-colors opacity-70 hover:opacity-100"
+            title="Add condition"
+          >
+            <span className="text-gray-600 text-xs font-medium">+</span>
+          </button>
+        </div>
+      </EdgeLabelRenderer>
+    );
+  }
+
+  return (
+    <EdgeLabelRenderer>
+      <div
+        style={{
+          position: "absolute",
+          transform: `translate(-50%, -50%) translate(${midPoint.x}px,${midPoint.y}px)`,
+          pointerEvents: "all",
+          ...style,
+        }}
+        className="edge-condition-label"
+      >
+        {isEditing ? (
+          <div className="flex items-center gap-1 bg-white border border-gray-300 rounded px-2 py-1 shadow-sm">
+            <input
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleSave}
+              autoFocus
+              className="text-xs border-none outline-none bg-transparent min-w-[60px]"
+              placeholder="Condition"
+              style={{ fontSize: "11px" }}
+            />
+          </div>
+        ) : (
+          <div
+            onClick={handleClick}
+            className="bg-blue-100 border border-blue-300 rounded px-2 py-1 cursor-pointer hover:bg-blue-200 transition-colors"
+            style={{ fontSize: "11px" }}
+          >
+            {condition}
+          </div>
+        )}
+      </div>
+    </EdgeLabelRenderer>
+  );
+};
+
 export const CustomEdge = ({
   type,
   data,
@@ -437,11 +553,18 @@ export const CustomEdge = ({
   } = pathProps;
 
   return (
-    <BaseEdge
-      path={edgePath}
-      style={{ ...EDGE_STYLES[edgeType], strokeWidth: 2 }}
-      {...validPathProps}
-    />
+    <>
+      <BaseEdge
+        path={edgePath}
+        style={{ ...EDGE_STYLES[edgeType], strokeWidth: 2 }}
+        {...validPathProps}
+      />
+      <EdgeConditionLabel
+        edgeId={props.id}
+        condition={data?.condition as string | undefined}
+        edgePath={edgePath}
+      />
+    </>
   );
 };
 
@@ -518,6 +641,11 @@ export const BidirectionalEdge = ({
         }}
         className="react-flow__edge-bidirectional"
         {...validPathProps}
+      />
+      <EdgeConditionLabel
+        edgeId={props.id}
+        condition={data?.condition as string | undefined}
+        edgePath={edgePath}
       />
     </>
   );
