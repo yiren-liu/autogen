@@ -13,10 +13,12 @@ import {
   Session,
   Component,
   ModelClientStreamingChunkEvent,
+  GraphConfig,
+  Graph,
 } from "../../../types/datamodel";
 import { appContext } from "../../../../hooks/provider";
 import ChatInput from "./chatinput";
-import { teamAPI } from "../../teambuilder/api";
+import { teamAPI, graphAPI } from "../../teambuilder/api";
 import { sessionAPI } from "../api";
 import RunView from "./runview";
 import { TIMEOUT_CONFIG } from "./types";
@@ -28,6 +30,7 @@ import {
 } from "lucide-react";
 import SessionDropdown from "./sessiondropdown";
 import { RcFile } from "antd/es/upload";
+
 const logo = require("../../../../images/landing/welcome.svg").default;
 
 interface ChatViewProps {
@@ -77,7 +80,7 @@ export default function ChatView({
     null
   );
   const [teamConfig, setTeamConfig] =
-    React.useState<Component<TeamConfig> | null>(null);
+    React.useState<Component<TeamConfig | GraphConfig> | null>(null);
 
   const inputTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const activeSocketRef = React.useRef<WebSocket | null>(null);
@@ -119,21 +122,36 @@ export default function ChatView({
     }
   }, [session?.id]);
 
-  // Load team config
+  // Load team or graph config
   React.useEffect(() => {
-    if (session?.team_id && user?.id) {
-      teamAPI
-        .getTeam(session.team_id, user.id)
-        .then((team) => {
-          setTeamConfig(team.component);
-        })
-        .catch((error) => {
-          console.error("Error loading team config:", error);
-          // messageApi.error("Failed to load team config");
-          setTeamConfig(null);
-        });
+    if (session && user?.id) {
+      if (session.graph_id) {
+        // Load graph config if session has graph_id
+        graphAPI
+          .getGraph(session.graph_id, user.id)
+          .then((graph: Graph) => {
+            setTeamConfig(graph.component);
+          })
+          .catch((error: any) => {
+            console.error("Error loading graph config:", error);
+            setTeamConfig(null);
+          });
+      } else if (session.team_id) {
+        // Load team config if session has team_id
+        teamAPI
+          .getTeam(session.team_id, user.id)
+          .then((team) => {
+            setTeamConfig(team.component);
+          })
+          .catch((error) => {
+            console.error("Error loading team config:", error);
+            setTeamConfig(null);
+          });
+      } else {
+        setTeamConfig(null);
+      }
     }
-  }, [session]);
+  }, [session, user?.id]);
 
   React.useEffect(() => {
     setTimeout(() => {

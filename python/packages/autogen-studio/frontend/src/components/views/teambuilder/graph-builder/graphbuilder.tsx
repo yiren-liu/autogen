@@ -658,6 +658,7 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
                     isVisible={true}
                     onClose={handleCloseRightPanel}
                     component={syncToJson()!}
+                    graphId={graph?.id}
                   />
                 )}
               </View>

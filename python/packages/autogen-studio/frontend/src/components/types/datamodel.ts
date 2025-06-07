@@ -363,8 +363,11 @@ export interface Graph extends DBModel {
 }
 
 export interface Session extends DBModel {
-  name: string;
+  user_id: string;
   team_id?: number;
+  graph_id?: number;
+  name?: string;
+  description?: string;
 }
 
 // Runtime Types

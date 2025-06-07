@@ -176,7 +176,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            compare_type=True
+            compare_type=True,
             render_as_batch=is_sqlite,
         )
         with context.begin_transaction():
@@ -296,10 +296,12 @@ datefmt = %H:%M:%S
                 """        context.configure(
                 connection=connection, target_metadata=target_metadata
             )""",
-                """        context.configure(
+                """        is_sqlite = connection.dialect.name == "sqlite"
+        context.configure(
                 connection=connection,
                 target_metadata=target_metadata,
                 compare_type=True,
+                render_as_batch=is_sqlite,
             )""",
             )
 

@@ -74,8 +74,10 @@ class Message(BaseDBModel, table=True):
 
 class Session(BaseDBModel, table=True):
     __table_args__ = {"sqlite_autoincrement": True}
-    team_id: Optional[int] = Field(default=None, sa_column=Column(Integer, ForeignKey("team.id", ondelete="CASCADE")))
+    team_id: Optional[int] = Field(default=None, sa_column=Column(Integer, ForeignKey("team.id", ondelete="CASCADE"), index=True))
+    graph_id: Optional[int] = Field(default=None, sa_column=Column(Integer, ForeignKey("graph.id", ondelete="CASCADE"), index=True))
     name: Optional[str] = None
+    description: Optional[str] = None
 
     @field_validator("created_at", "updated_at", mode="before")
     @classmethod
@@ -83,6 +85,17 @@ class Session(BaseDBModel, table=True):
         if isinstance(value, str):
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
         return value
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": "user123",
+                "team_id": 1,
+                "graph_id": None,
+                "name": "Session 1",
+                "description": "Test session",
+            }
+        }
 
 
 class RunStatus(str, Enum):

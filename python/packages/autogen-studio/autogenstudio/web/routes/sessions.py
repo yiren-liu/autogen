@@ -5,7 +5,7 @@ from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
-from ...datamodel import Message, Response, Run, Session
+from ...datamodel import Message, Response, Run, Session, Graph
 from ..deps import get_db
 
 router = APIRouter()
@@ -31,6 +31,19 @@ async def get_session(session_id: int, user_id: str, db=Depends(get_db)) -> Dict
 async def create_session(session: Session, db=Depends(get_db)) -> Response:
     """Create a new session"""
     try:
+        # Validate that either team_id or graph_id is provided, but not both
+        if session.team_id and session.graph_id:
+            return Response(status=False, message="Cannot specify both team_id and graph_id")
+        
+        if not session.team_id and not session.graph_id:
+            return Response(status=False, message="Either team_id or graph_id must be provided")
+        
+        # If graph_id is provided, verify it exists and belongs to the user
+        if session.graph_id:
+            graph_response = db.get(Graph, filters={"id": session.graph_id, "user_id": session.user_id})
+            if not graph_response.status or not graph_response.data:
+                return Response(status=False, message="Graph not found or access denied")
+        
         response = db.upsert(session)
         if not response.status:
             return Response(status=False, message=f"Failed to create session: {response.message}")

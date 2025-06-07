@@ -33,7 +33,11 @@ updateNode: (nodeId, updates) => {
 - Fix edit component drawer in graph builder mode (Done)
 - Integrate component editor and test drawer as side panels (Done)
 - Design data structures for component --> test suite --> test cases
-- Implement conversational session support for graph workflows
+- Implement conversational session support for graph workflows 
+  - Modified session API to accept graph_id parameter (Done)
+  - Frontend loads graph config when session has graph_id (Done)
+  - Test drawer creates sessions directly with graph_id instead of temporary teams (Done)
+  - Backend TeamManager already supports dict configs so graphs work seamlessly (Done)
   - Also support live-rendering + centering similar to Dify
 
 ## Integrated Panel Implementation
