@@ -39,6 +39,8 @@ updateNode: (nodeId, updates) => {
   - Test drawer creates sessions directly with graph_id instead of temporary teams (Done)
   - Backend TeamManager already supports dict configs so graphs work seamlessly (Done)
   - Also support live-rendering + centering similar to Dify
+- Onclick node opens the node edit panel directly (instead of having to click edit button)
+- Cursor moving over the right handle of each node will spawn a "Add" icon button, and if the user clicks, a drop-down menu will show up to allow user to choose "add an agent" or "cancel" as two options. If "add an agent" is chosen, add an new agent node to the graph connected to the node. (Done)
 
 ## Integrated Panel Implementation
 
@@ -327,3 +329,52 @@ When migrating components from `../builder` to graph-builder directory:
 - Supports both CustomEdge and BidirectionalEdge components
 - Uses graph builder store for proper state management and history tracking
 - Fixed: Edge condition changes now properly save when graph is saved (store vs React Flow state sync issue)
+
+## Hover-to-Add Functionality Implementation
+
+### Right Handle Hover Detection
+- Added hover state management with `isHovering` and `showAddMenu` state variables
+- Wrapped source handle in container div with hover event handlers (`onMouseEnter`, `onMouseLeave`)
+- Positioned hover area at right: -16px to extend beyond the handle for better UX
+
+### Add Button Component
+- Shows blue circular button with Plus icon on hover over right handle
+- Uses Adobe Spectrum ActionButton with custom UNSAFE_className styling
+- Button positioned 16px to the right of the handle using absolute positioning
+- Smooth transitions with hover effects (bg-blue-500 → bg-blue-600)
+
+### Dropdown Menu Integration
+- Uses Adobe Spectrum MenuTrigger, Popover, Menu, and Item components
+- Menu triggered by clicking the Add button
+- Two options: "Add Agent" and "Cancel"
+- Menu automatically closes when hovering away or selecting option
+
+### Agent Creation Logic
+- `createDefaultAgent()` function generates complete AssistantAgent configuration
+- Uses timestamp for unique naming (assistant_agent_{timestamp})
+- Includes default OpenAI model client (gpt-4o-mini)
+- Includes standard model context, tools array, handoffs array
+- Sets default system message for helpful assistant behavior
+
+### Node Positioning and Connection
+- New agent positioned 300px to the right of source node (`x: props.xPos + 300`)
+- Maintains same vertical level (`y: props.yPos`) 
+- Automatically creates connection edge from source node to new agent
+- Uses store's `addNode(position, config, targetNodeId)` function
+- History tracking automatically handled by store
+
+### User Experience Features
+- Hover area larger than visual handle for easier interaction
+- Menu closes automatically when mouse leaves hover area
+- Visual feedback with button hover states and transitions
+- Consistent with existing node interaction patterns (edit, delete buttons)
+
+### Technical Implementation Details
+- Added Plus icon import from lucide-react
+- Added Adobe Spectrum component imports (ActionButton, Menu, MenuTrigger, Item)
+- Hover detection uses absolute positioned container around source handle
+- z-index: 10 ensures hover area appears above other elements
+- Menu state managed locally within component
+- Integration with existing store actions for node creation and history
+- Fixed MenuTrigger pattern: uses direct Menu child with onAction handler, no Popover wrapper needed
+- Position access uses React Flow's positionAbsoluteX/Y properties for accurate node positioning

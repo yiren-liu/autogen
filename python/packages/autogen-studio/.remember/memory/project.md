@@ -6,6 +6,7 @@
 - Bidirectional edge rendering for immediate cycles (shows single edge with arrows on both ends)
 - Visual status badges showing model names instead of generic "Has Model"
 - Smooth transitions and hover effects for better UX
+- Hover-to-add functionality on right handles: hover over source handle shows Add button with dropdown menu to add new agent nodes with automatic connection
 
 ## Code Architecture Patterns
 - Follow existing teambuilder structure when creating new builders

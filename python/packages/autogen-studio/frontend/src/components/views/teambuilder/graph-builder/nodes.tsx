@@ -18,7 +18,14 @@ import {
   Trash2Icon,
   Edit,
   Bot,
+  Plus,
 } from "lucide-react";
+import {
+  ActionButton,
+  Menu,
+  MenuTrigger,
+  Item,
+} from "@adobe/react-spectrum";
 import { CustomNode } from "./types";
 import {
   AgentConfig,
@@ -203,6 +210,7 @@ const ConnectionBadge: React.FC<{
 // Simplified Node Component
 export const SimpleNode = memo<NodeProps<CustomNode>>((props) => {
   const { id, data, selected, dragHandle } = props;
+  const [isHovering, setIsHovering] = React.useState(false);
   
   // Don't render graph type nodes
   if (data.type === "graph") {
@@ -213,6 +221,7 @@ export const SimpleNode = memo<NodeProps<CustomNode>>((props) => {
   const setSelectedNode = useGraphBuilderStore(
     (state) => state.setSelectedNode
   );
+  const addNode = useGraphBuilderStore((state) => state.addNode);
   
   const component = data.component;
   const Icon = iconMap[component.component_type] || Bot;
@@ -223,6 +232,64 @@ export const SimpleNode = memo<NodeProps<CustomNode>>((props) => {
     name: (component.config as any)?.name || component.label || "Unnamed",
     subtitle: getNodeSubtitle(component),
     color: getNodeColor(component.component_type),
+  };
+
+  // Create default agent configuration
+  const createDefaultAgent = (): Component<ComponentConfig> => {
+    const timestamp = Date.now();
+    return {
+      provider: "autogen_agentchat.agents.AssistantAgent",
+      component_type: "agent",
+      version: 1,
+      component_version: 1,
+      description: "An agent that provides assistance with tool use.",
+      label: `Assistant Agent ${timestamp}`,
+      config: {
+        name: `assistant_agent_${timestamp}`,
+        model_client: {
+          provider: "autogen_ext.models.openai.OpenAIChatCompletionClient",
+          component_type: "model",
+          version: 1,
+          component_version: 1,
+          description: "Chat completion client for OpenAI hosted models.",
+          label: "OpenAIChatCompletionClient",
+          config: {
+            model: "gpt-4o-mini"
+          }
+        },
+        tools: [],
+        handoffs: [],
+        model_context: {
+          provider: "autogen_core.model_context.UnboundedChatCompletionContext",
+          component_type: "chat_completion_context",
+          version: 1,
+          component_version: 1,
+          description: "An unbounded chat completion context that keeps a view of the all the messages.",
+          label: "UnboundedChatCompletionContext",
+          config: {}
+        },
+        description: "An agent that provides assistance with tool use.",
+        system_message: "You are a helpful assistant. Solve tasks carefully. When done, say TERMINATE.",
+        model_client_stream: false,
+        reflect_on_tool_use: false,
+        tool_call_summary_format: "{result}"
+      }
+    } as Component<ComponentConfig>;
+  };
+
+  const handleAddAgentClick = () => {
+    console.log('Add agent button clicked!'); // Debug log
+    // Calculate position for new node (to the right of current node)
+    const position = {
+      x: (props.positionAbsoluteX || 0) + 300, // Position to the right
+      y: (props.positionAbsoluteY || 0), // Same vertical level
+    };
+    
+    console.log('Position calculated:', position); // Debug log
+    const defaultAgent = createDefaultAgent();
+    console.log('Default agent created:', defaultAgent); // Debug log
+    addNode(position, defaultAgent, id); // Pass current node id as targetNodeId
+    console.log('addNode called'); // Debug log
   };
 
   return (
@@ -236,13 +303,39 @@ export const SimpleNode = memo<NodeProps<CustomNode>>((props) => {
       style={{ borderColor: selected ? undefined : nodeInfo.color }}
     >
       {/* Source handle - for outgoing connections */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        id={`${id}-source`}
-        className="!bg-gray-400 !w-3 !h-3 hover:!bg-accent transition-colors"
-        style={{ right: -8 }}
-      />
+      <div 
+        className="absolute"
+        style={{ right: -16, top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}
+        onMouseEnter={() => setIsHovering(true)}
+                 onMouseLeave={() => setIsHovering(false)}
+      >
+        <Handle
+          type="source"
+          position={Position.Right}
+          id={`${id}-source`}
+          className="!bg-gray-400 !w-3 !h-3 hover:!bg-accent transition-colors"
+          style={{ position: 'relative', right: 'auto', left: -8 }}
+        />
+        
+        {/* Add button that shows on hover */}
+        {isHovering && (
+          <div 
+            className="absolute" 
+            style={{ left: 8, top: '50%', transform: 'translateY(-50%)' }}
+          >
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddAgentClick();
+              }}
+              className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg transition-all duration-200"
+              title="Add Agent"
+            >
+              <Plus size={12} />
+            </button>
+          </div>
+        )}
+      </div>
       
       {/* Target handle - for incoming connections */}
       <Handle
