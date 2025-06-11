@@ -390,3 +390,72 @@ div#gatsby-focus-wrapper {
   margin: 0 !important;
   border: none !important;
 }
+
+
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #334155;
+    --card: #ffffff;
+    --card-foreground: #334155;
+    --popover: #ffffff;
+    --popover-foreground: #334155;
+    --primary: #ffffff;
+    --primary-foreground: #111827;
+    --secondary: #edf2f7;
+    --secondary-foreground: #334155;
+    --muted: #f3f6f9;
+    --muted-foreground: #64748b;
+    --accent: #464feb;
+    --accent-foreground: #ffffff;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #edf2f7;
+    --input: #f9fafb;
+    --ring: #464feb;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: #111827;
+    --foreground: #f7fafc;
+    --card: #1e293b;
+    --card-foreground: #f7fafc;
+    --popover: #1e293b;
+    --popover-foreground: #f7fafc;
+    --primary: #111827;
+    --primary-foreground: #f7fafc;
+    --secondary: #27354c;
+    --secondary-foreground: #f7fafc;
+    --muted: #374151;
+    --muted-foreground: #e2e8f0;
+    --accent: #464feb;
+    --accent-foreground: #ffffff;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #374151;
+    --input: #27354c;
+    --ring: #464feb;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

@@ -378,3 +378,24 @@ When migrating components from `../builder` to graph-builder directory:
 - Integration with existing store actions for node creation and history
 - Fixed MenuTrigger pattern: uses direct Menu child with onAction handler, no Popover wrapper needed
 - Position access uses React Flow's positionAbsoluteX/Y properties for accurate node positioning
+
+## CSS Color Scheme Unification
+
+### Issue: Inconsistent Color Schemes
+**Problem**: 
+- Two different color schemes in global.css using different variable naming conventions
+- Top scheme used `--color-` prefix with hex colors
+- Bottom scheme used shadcn/ui style variables with HSL values
+- This caused visual inconsistency between components using different systems
+
+**Solution**:
+- Updated bottom color scheme variables to use same hex color values as top scheme
+- Maintained variable naming but unified the actual color values
+- Ensured both light and dark themes use consistent colors across both systems
+- Kept accent color `#464feb` consistent throughout
+
+
+### Follow-up: Tailwind Config HSL Removal
+**Issue**: After converting CSS variables from HSL to hex format, Tailwind was still wrapping them in `hsl()` functions
+**Solution**: Removed all `hsl()` wrappers from tailwind.config.js color definitions, except for chart colors which still use HSL format
+**Result**: Tailwind now directly uses hex color values from CSS variables, ensuring consistent color rendering
