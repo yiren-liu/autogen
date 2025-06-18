@@ -45,7 +45,8 @@ export default function ChatInput({
 }: ChatInputProps) {
   const textAreaRef = React.useRef<HTMLTextAreaElement>(null);
   const [previousLoading, setPreviousLoading] = React.useState(loading);
-  const [text, setText] = React.useState("What is the capital of France?");
+  // const [text, setText] = React.useState("What is the capital of France?");
+  const [text, setText] = React.useState("Create an Ad. campaign for Product: 'EcoSpark' --- eco-friendly laundry detergent for young families.");
   const [fileList, setFileList] = React.useState<UploadFile[]>([]);
   const [dragOver, setDragOver] = React.useState(false);
   const [notificationApi, notificationContextHolder] =

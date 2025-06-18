@@ -13,11 +13,14 @@ import {
   ReactFlow,
   useNodesState,
   useEdgesState,
-  addEdge,
   Connection,
   Background,
   BackgroundVariant,
   MiniMap,
+  addEdge,
+  EdgeChange,
+  NodeChange,
+  SelectionMode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { 
@@ -48,6 +51,7 @@ import { ComponentTypes, Gallery, Graph } from "../../../types/datamodel";
 
 
 import { CustomNode, CustomEdge, DragItem } from "./types";
+import SelectionBox from "./SelectionBox";
 import { edgeTypes, nodeTypes } from "./nodes";
 import ComponentEditor from "./component-editor/component-editor";
 
@@ -98,6 +102,8 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
   const [validationLoading, setValidationLoading] = useState(false);
   const [rightPanelMode, setRightPanelMode] = useState<'none' | 'component' | 'test'>('none');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedNodesCount, setSelectedNodesCount] = useState(0);
+  const [selectedEdgesCount, setSelectedEdgesCount] = useState(0);
 
   const {
     undo,
@@ -109,9 +115,13 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
     resetHistory,
     history,
     updateNode,
+    deleteNode,
     selectedNodeId,
     setSelectedNode,
+    addGraphEdge,
+    removeGraphEdge,
   } = useGraphBuilderStore();
+  // const setNewEdges = useGraphBuilderStore((state) => state.setEdges);
 
   const currentHistoryIndex = useGraphBuilderStore(
     (state) => state.currentHistoryIndex
@@ -126,52 +136,159 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
 
   const onConnect = useCallback(
     (params: Connection) => {
-      setEdges((eds: CustomEdge[]) => {
-        // Check for existing reverse connection
-        const reverseEdge = eds.find(
-          (e) => e.source === params.target && e.target === params.source
-        );
+      const currentEdges = useGraphBuilderStore.getState().edges;
+      
+      // Check for existing reverse connection
+      const reverseEdge = currentEdges.find(
+        (e) => e.source === params.target && e.target === params.source
+      );
 
-        if (reverseEdge) {
-          // Remove the reverse edge and create a bidirectional edge
-          const filteredEdges = eds.filter((e) => e.id !== reverseEdge.id);
-          const bidirectionalEdge: CustomEdge = {
-            ...params,
-            id: `${params.source}-${params.target}-bidirectional`,
-            type: "bidirectional",
-          } as CustomEdge;
-          
-          return addEdge(bidirectionalEdge, filteredEdges);
-        } else {
-          // Check if there's already a bidirectional edge
-          const existingBidirectional = eds.find(
-            (e) => 
-              e.type === "bidirectional" && 
-              ((e.source === params.source && e.target === params.target) ||
-               (e.source === params.target && e.target === params.source))
-          );
-          
-          if (existingBidirectional) {
-            // Don't add duplicate edge if bidirectional already exists
-            return eds;
-          }
-          
-          // Create a normal edge
-          const newEdge: CustomEdge = {
-            ...params,
-            id: `${params.source}-${params.target}`,
-            type: "graph-connection",
-          } as CustomEdge;
-          
-          return addEdge(newEdge, eds);
+      let updatedEdges: CustomEdge[];
+      
+      if (reverseEdge) {
+        // Remove the reverse edge and create a bidirectional edge
+        const filteredEdges = currentEdges.filter((e) => e.id !== reverseEdge.id);
+        // take the in and out edge data, and form bidirectional edge data 
+        const bidirectionalEdge: CustomEdge = {
+          ...params,
+          id: `${params.source}-${params.target}-bidirectional`,
+          type: "bidirectional",
+          data: {
+            condition: reverseEdge.data?.condition,
+            outCondition: "",
+          },
+        } as CustomEdge;
+
+        updatedEdges = addEdge(bidirectionalEdge, filteredEdges);
+      } else {
+        // Check if there's already a bidirectional edge
+        const existingBidirectional = currentEdges.find(
+          (e) => 
+            e.type === "bidirectional" && 
+            ((e.source === params.source && e.target === params.target) ||
+             (e.source === params.target && e.target === params.source))
+        );
+        
+        if (existingBidirectional) {
+          // Don't add duplicate edge if bidirectional already exists
+          return;
         }
-      });
+        
+        // Create a normal edge
+        const newEdge: CustomEdge = {
+          ...params,
+          id: `${params.source}-${params.target}`,
+          type: "graph-connection",
+        } as CustomEdge;
+        
+        updatedEdges = addEdge(newEdge, currentEdges);
+      }
+      
+      // Update the store's edges
+      useGraphBuilderStore.getState().setEdges(updatedEdges);
       
       // Add to history for undo/redo
       useGraphBuilderStore.getState().addToHistory();
     },
-    [setEdges]
+    []
   );
+
+  // Custom edge changes handler to intercept deletions and use store methods
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange<CustomEdge>[]) => {
+      // Separate deletion changes from other changes
+      const deleteChanges = changes.filter((change) => change.type === 'remove');
+      const otherChanges = changes.filter((change) => change.type !== 'remove');
+
+      // Handle deletions using store methods
+      if (deleteChanges.length > 0) {
+        const currentEdges = useGraphBuilderStore.getState().edges;
+        const edgesToDelete = deleteChanges.map((change) => change.id);
+        
+        // Filter out deleted edges
+        const filteredEdges = currentEdges.filter((edge) => !edgesToDelete.includes(edge.id));
+        
+        // Update store with filtered edges
+        useGraphBuilderStore.getState().setEdges(filteredEdges);
+        
+        // Add to history for undo/redo
+        useGraphBuilderStore.getState().addToHistory();
+      }
+
+      // Let ReactFlow handle non-deletion changes (like selection, hover, etc.)
+      if (otherChanges.length > 0) {
+        onEdgesChange(otherChanges);
+      }
+    },
+    [onEdgesChange]
+  );
+
+  // Custom node changes handler to intercept deletions and use store methods
+  const handleNodesChange = useCallback(
+    (changes: NodeChange<CustomNode>[]) => {
+      // Separate deletion changes from other changes
+      const deleteChanges = changes.filter((change) => change.type === 'remove');
+      const otherChanges = changes.filter((change) => change.type !== 'remove');
+
+      // Handle deletions using store methods
+      if (deleteChanges.length > 0) {
+        const nodesToDelete = deleteChanges.map((change) => change.id);
+        
+        // Delete each node using store method
+        nodesToDelete.forEach((nodeId) => {
+          deleteNode(nodeId);
+        });
+      }
+
+      // Let ReactFlow handle non-deletion changes (like selection, hover, etc.)
+      if (otherChanges.length > 0) {
+        onNodesChange(otherChanges);
+      }
+    },
+    [onNodesChange, deleteNode]
+  );
+
+  // Handle selection changes for nodes
+  const handleSelectionChange = useCallback(
+    ({ nodes: selectedNodes, edges: selectedEdges }: { nodes: CustomNode[], edges: CustomEdge[] }) => {
+      setSelectedNodesCount(selectedNodes.length);
+      setSelectedEdgesCount(selectedEdges.length);
+      
+      // If only one node is selected, open component editor
+      if (selectedNodes.length === 1) {
+        setSelectedNode(selectedNodes[0].id);
+      } else if (selectedNodes.length === 0) {
+        setSelectedNode(null);
+      } else {
+        // Multiple nodes selected, close component editor if open
+        if (rightPanelMode === 'component') {
+          setRightPanelMode('none');
+        }
+        setSelectedNode(null);
+      }
+    },
+    [setSelectedNode, rightPanelMode]
+  );
+
+  // Bulk delete selected elements
+  const handleBulkDelete = useCallback(() => {
+    const selectedNodes = nodes.filter(node => node.selected);
+    const selectedEdges = edges.filter(edge => edge.selected);
+    
+    // Delete selected nodes
+    selectedNodes.forEach(node => {
+      deleteNode(node.id);
+    });
+    
+    // Delete selected edges
+    if (selectedEdges.length > 0) {
+      const currentEdges = useGraphBuilderStore.getState().edges;
+      const edgeIds = selectedEdges.map(edge => edge.id);
+      const filteredEdges = currentEdges.filter(edge => !edgeIds.includes(edge.id));
+      useGraphBuilderStore.getState().setEdges(filteredEdges);
+      useGraphBuilderStore.getState().addToHistory();
+    }
+  }, [nodes, edges, deleteNode]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -306,8 +423,62 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
 
   React.useEffect(() => {
     const unsubscribe = useGraphBuilderStore.subscribe((state) => {
-      setNodes(state.nodes);
-      setEdges(state.edges);
+      // Preserve selection and position state when updating from store
+      setNodes(currentNodes => {
+        // Create maps of current selections and positions
+        const selectionMap = new Map();
+        const positionMap = new Map();
+        currentNodes.forEach(node => {
+          if (node.selected) {
+            selectionMap.set(node.id, true);
+          }
+          // Preserve current position if it exists
+          positionMap.set(node.id, node.position);
+        });
+        
+        // Check if this looks like a bulk layout operation
+        let nodesWithSignificantChanges = 0;
+        state.nodes.forEach(node => {
+          const currentPosition = positionMap.get(node.id);
+          if (currentPosition && (
+            Math.abs(currentPosition.x - node.position.x) > 30 ||
+            Math.abs(currentPosition.y - node.position.y) > 30
+          )) {
+            nodesWithSignificantChanges++;
+          }
+        });
+        
+        // If many nodes changed position significantly, it's likely a layout operation
+        const isLayoutOperation = nodesWithSignificantChanges >= Math.min(3, state.nodes.length * 0.5);
+        
+        // Apply selections and positions to new nodes from store
+        return state.nodes.map(node => {
+          const currentPosition = positionMap.get(node.id);
+          
+          return {
+            ...node,
+            selected: selectionMap.has(node.id) || false,
+            // Use store position if it's a layout operation, otherwise preserve current position
+            position: isLayoutOperation ? node.position : (currentPosition || node.position)
+          };
+        });
+      });
+      
+      setEdges(currentEdges => {
+        // Create a map of current edge selections
+        const edgeSelectionMap = new Map();
+        currentEdges.forEach(edge => {
+          if (edge.selected) {
+            edgeSelectionMap.set(edge.id, true);
+          }
+        });
+        
+        // Apply selections to new edges from store
+        return state.edges.map(edge => ({
+          ...edge,
+          selected: edgeSelectionMap.has(edge.id) || false
+        }));
+      });
     });
     return unsubscribe;
   }, [setNodes, setEdges]);
@@ -403,6 +574,38 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
 
   const rightPanelWidth = rightPanelMode === 'none' ? '0px' : '400px';
 
+  // Add keyboard shortcuts for multi-selection operations
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl+A or Cmd+A to select all
+      if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
+        event.preventDefault();
+        setNodes(nodes => nodes.map(node => ({ ...node, selected: true })));
+        setEdges(edges => edges.map(edge => ({ ...edge, selected: true })));
+      }
+      
+      // Escape to deselect all
+      if (event.key === 'Escape') {
+        setNodes(nodes => nodes.map(node => ({ ...node, selected: false })));
+        setEdges(edges => edges.map(edge => ({ ...edge, selected: false })));
+      }
+      
+      // Delete key to delete selected elements
+      if ((event.key === 'Delete' || event.key === 'Backspace')) {
+        const hasSelection = selectedNodesCount > 0 || selectedEdgesCount > 0;
+        if (hasSelection) {
+          event.preventDefault();
+          handleBulkDelete();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodesCount, selectedEdgesCount, handleBulkDelete, setNodes, setEdges]);
+
+
+
   return (
     <View>
       <Flex 
@@ -420,6 +623,15 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
           >
             {isJsonMode ? "View JSON" : "Visual Builder"}
           </Switch>
+          
+
+          
+          {/* Selection Tips */}
+          {selectedNodesCount === 0 && selectedEdgesCount === 0 && (
+            <View UNSAFE_className="text-xs text-gray-500">
+              <span>Drag to pan • Hold Shift + drag to select multiple elements</span>
+            </View>
+          )}
         </Flex>
 
         <Flex direction="row" alignItems="center" gap="size-100">
@@ -555,15 +767,23 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
                     <ReactFlow
                       nodes={nodes}
                       edges={edges}
-                      onNodesChange={onNodesChange}
-                      onEdgesChange={onEdgesChange}
+                      onNodesChange={handleNodesChange}
+                      onEdgesChange={handleEdgesChange}
                       onConnect={onConnect}
+                      onSelectionChange={handleSelectionChange}
                       nodeTypes={nodeTypes}
                       edgeTypes={edgeTypes}
                       deleteKeyCode={["Backspace", "Delete"]}
                       fitView
                       snapToGrid={showGrid}
                       className="reactflow-wrapper"
+                      multiSelectionKeyCode={["Shift"]}
+                      selectionOnDrag={true}
+                      panOnDrag={true}
+                      selectNodesOnDrag={false}
+                      selectionMode={SelectionMode.Full}
+                      selectionKeyCode={["Shift"]}
+                      panActivationKeyCode={null}
                     >
                       <Background
                         variant={BackgroundVariant.Dots}
@@ -585,6 +805,7 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
                         showMiniMap={showMiniMap}
                         onToggleMiniMap={() => setShowMiniMap(!showMiniMap)}
                       />
+                      <SelectionBox />
                     </ReactFlow>
                   )}
                 </View>

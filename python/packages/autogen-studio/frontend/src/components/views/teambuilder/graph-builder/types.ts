@@ -30,7 +30,8 @@ export type EdgeTypes =
   | "bidirectional";
 
 export interface EdgeData extends Record<string, unknown> {
-  condition?: string;
+  condition?: string; // condition for the previous agent to pass to the next agent, applies for both uni- and bidirectional edges
+  outCondition?: string; // condition for the next agent to pass back to the previous agent, applies only for bidirectional edges
 }
 
 export interface CustomEdge extends Edge {

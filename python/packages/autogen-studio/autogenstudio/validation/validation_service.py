@@ -4,6 +4,7 @@ from calendar import c
 from typing import Any, Dict, List, Optional
 
 from autogen_core import ComponentModel, is_component_class
+from autogen_agentchat.teams._group_chat._graph import DiGraph
 from pydantic import BaseModel
 
 
@@ -151,6 +152,26 @@ class ValidationService:
         if not errors:
             if inst_error := cls.validate_instantiation(component):
                 errors.append(inst_error)
+
+        # TODO: if the component is a graph, validate the graph
+        if component.component_type == "graph":
+            # graph_errors = cls.validate_graph(component)
+            graph_errors = []
+            try:
+                digraph = DiGraph(
+                    nodes=component.config.get("graph", {}).get("nodes", {}),
+                    default_start_node=component.config.get("graph", {}).get("default_start_node", None),
+                )
+                digraph.graph_validate()
+            except Exception as e:
+                # graph_errors.append(e)
+                graph_errors.append(ValidationError(
+                    field="graph",
+                    error=f"Graph validation failed: {str(e)}",
+                    suggestion="Check that the graph is valid",
+                ))
+            errors.extend(graph_errors)
+            # raise Exception("implment graph validation")
 
         # Check for version warnings
         if not component.version:

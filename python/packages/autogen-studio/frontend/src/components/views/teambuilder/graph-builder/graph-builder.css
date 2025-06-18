@@ -111,3 +111,95 @@
 .edge-condition-label {
   @apply transition-opacity duration-200;
 } 
+
+/* Drag selection box styling */
+.react-flow__selection {
+  @apply border border-blue-400 bg-blue-50 bg-opacity-40 rounded-sm;
+  transition: all 0.1s ease-out;
+  backdrop-filter: blur(1px);
+}
+
+.react-flow__selection.dark {
+  @apply border-blue-500 bg-blue-900 bg-opacity-30;
+}
+
+/* Enhanced selection feedback */
+.react-flow__node.selectable:hover {
+  @apply ring-2 ring-blue-300 ring-opacity-50;
+}
+
+.react-flow__edge.selectable:hover .react-flow__edge-path {
+  @apply stroke-blue-400;
+} 
+
+/* Selection toolbar styling */
+.react-flow__node-toolbar {
+  @apply z-50;
+}
+
+/* Prevent toolbar from being dragged or panned */
+.nodrag {
+  pointer-events: all !important;
+  user-select: none;
+}
+
+.nopan {
+  cursor: default !important;
+}
+
+/* Animation for toolbar appearance */
+.react-flow__node-toolbar > div {
+  animation: toolbar-slide-down 0.2s ease-out;
+}
+
+@keyframes toolbar-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Group Node Styles */
+.group-node {
+  @apply relative overflow-visible;
+  min-width: 200px;
+  min-height: 150px;
+}
+
+.group-node .group-header {
+  @apply sticky top-0 z-10;
+}
+
+/* Resize control styling for group nodes */
+.group-node .resize-control {
+  @apply border-blue-400;
+}
+
+.group-node .resize-control .react-flow__resize-control-handle {
+  @apply bg-blue-400 hover:bg-blue-500;
+}
+
+/* Group node selection */
+.react-flow__node[data-type="group"].selected .group-node {
+  @apply border-blue-500 shadow-lg;
+}
+
+/* Child node positioning within groups */
+.react-flow__node[data-parentid] {
+  @apply relative;
+  z-index: 10;
+}
+
+/* Group node hover effects */
+.group-node:hover {
+  @apply border-blue-400 shadow-md;
+}
+
+/* Group node toolbar styling */
+.react-flow__node[data-type="group"] .react-flow__node-toolbar {
+  @apply bg-white rounded-lg shadow-lg border border-gray-200 p-1;
+} 

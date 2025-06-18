@@ -26,6 +26,51 @@ updateNode: (nodeId, updates) => {
 }
 ```
 
+## Mistake: onConnect State Synchronization Issue
+**Wrong**:
+```
+const onConnect = useCallback(
+  (params: Connection) => {
+    setEdges((eds: CustomEdge[]) => {
+      // This only updated React Flow's local state, not the store
+      // ... edge creation logic ...
+      return addEdge(newEdge, eds);
+    });
+    
+    // Add to history saved the old store state (without new edge)
+    useGraphBuilderStore.getState().addToHistory();
+  },
+  [setEdges]
+);
+
+// This effect overwrote local changes with store state
+React.useEffect(() => {
+  const unsubscribe = useGraphBuilderStore.subscribe((state) => {
+    setNodes(state.nodes);
+    setEdges(state.edges);  // This overwrites local changes!
+  });
+  return unsubscribe;
+}, [setNodes, setEdges]);
+```
+
+**Correct**:
+```
+const onConnect = useCallback(
+  (params: Connection) => {
+    const currentEdges = useGraphBuilderStore.getState().edges;
+    
+    // ... edge creation logic using currentEdges ...
+    
+    // Update the store's edges directly
+    useGraphBuilderStore.getState().setEdges(updatedEdges);
+    
+    // Now addToHistory saves the correct state
+    useGraphBuilderStore.getState().addToHistory();
+  },
+  []
+);
+```
+
 ## TODO items
 - Migrate Builder components to GraphBuilder components (Done)
 - Simplify node interface in graph builder mode (Done)
@@ -39,8 +84,10 @@ updateNode: (nodeId, updates) => {
   - Test drawer creates sessions directly with graph_id instead of temporary teams (Done)
   - Backend TeamManager already supports dict configs so graphs work seamlessly (Done)
   - Also support live-rendering + centering similar to Dify
-- Onclick node opens the node edit panel directly (instead of having to click edit button)
+- Onclick node opens the node edit panel directly (instead of having to click edit button) (Dones)
 - Cursor moving over the right handle of each node will spawn a "Add" icon button, and if the user clicks, a drop-down menu will show up to allow user to choose "add an agent" or "cancel" as two options. If "add an agent" is chosen, add an new agent node to the graph connected to the node. (Done)
+- Persist component grouping to backend DB
+
 
 ## Integrated Panel Implementation
 
@@ -379,6 +426,83 @@ When migrating components from `../builder` to graph-builder directory:
 - Fixed MenuTrigger pattern: uses direct Menu child with onAction handler, no Popover wrapper needed
 - Position access uses React Flow's positionAbsoluteX/Y properties for accurate node positioning
 
+## Bidirectional Edge Condition Labels
+
+### Implementation Details
+- Created `BidirectionalEdgeConditionLabel` component for displaying two conditions on bidirectional edges
+- In condition displayed at 1/3 of edge path with → arrow (green styling)
+- Out condition displayed at 2/3 of edge path with ← arrow (blue styling)
+- Each condition can be edited independently with click-to-edit interface
+- Uses existing edge data structure: `condition` for in direction, `outCondition` for out direction
+- Proper integration with graph builder store's `updateEdgeData` function
+- Color coding: Green (bg-green-100) for In, Blue (bg-blue-100) for Out
+- Keyboard shortcuts: Enter to save, Escape to cancel editing
+- Visual indicators show direction flow with arrow symbols
+
+## Node Grouping/Ungrouping Implementation
+
+### Core Components Created
+- **useDetachNodes.tsx**: Custom hook for detaching child nodes from group nodes
+- **GroupNode.tsx**: Adobe Spectrum-based group node component with resizing and toolbar
+- **Group node type**: Added to nodeTypes registry as 'group' type
+
+### Store Integration
+- **createGroup()**: Creates group node from selected nodes/edges, calculates bounding box, sets parent relationships
+- **ungroupNodes()**: Restores grouped nodes to absolute positions, restores internal edges
+- Both functions include proper history tracking for undo/redo support
+
+### User Interface Features
+- **SelectionBox integration**: Group/Ungroup buttons appear when appropriate selections are made
+- **Group button**: Shows when 2+ nodes selected AND none are already grouped, creates group with auto-generated name  
+- **Ungroup button**: Shows when group nodes selected, ungroups all selected groups
+- **Visual feedback**: Color-coded hover states (blue for group, orange for ungroup)
+- **Double grouping prevention**: Cannot group nodes that are already part of a group (have parentId)
+
+### Group Node Features
+- **Resizable container**: Uses ReactFlow NodeResizer with minimum 200x150 dimensions
+- **Component preservation**: Stores original component data, edges, and metadata
+- **Visual design**: Blue-themed with dashed border, header with group icon and name
+- **Child node management**: Positions child nodes relatively within group bounds
+- **Toolbar actions**: Ungroup and Edit buttons with Adobe Spectrum styling
+
+### Technical Implementation
+- **Bounding box calculation**: Auto-sizes group based on contained nodes with padding
+- **Position management**: Converts absolute positions to relative during grouping
+- **Edge handling**: Preserves internal edges within group data, removes from main graph
+- **Parent-child relationships**: Uses ReactFlow's parentId and extent properties
+- **Data structure**: GroupNodeData interface stores grouped components and edges for later access
+
+### CSS Styling
+- **Group node styles**: Custom styling for group containers, headers, and resize controls
+- **Selection feedback**: Enhanced selection and hover states for group nodes
+- **Child node positioning**: Proper z-index handling for nested nodes
+- **Toolbar styling**: Consistent Adobe Spectrum button styling within node toolbars
+
+## Invisible Graph Node Selection Fix
+
+### Issue: Invisible "default_graph17" Node Always Selected
+**Problem**: 
+- `graphToVisualElements()` was creating a main graph node with id "graph" and label from sidebar
+- `SimpleNode` component was set to return `null` for graph type nodes (invisible)
+- Node existed in ReactFlow state and was selectable but invisible, causing selection issues
+
+**Root Cause**:
+- Sidebar creates graphs with labels like "default_graph17" 
+- Store creates invisible main graph node with this label
+- Node is selectable but not visible, confusing users
+
+**Solution**:
+- Removed main graph node creation entirely from `graphToVisualElements()`
+- Updated `visualElementsToGraph()` to work without requiring a graph node
+- Removed graph-to-termination edge creation (was connecting to removed graph node)
+- Graph metadata now managed by component props instead of invisible node
+
+**Changes Made**:
+- Store's `graphToVisualElements()`: Removed mainNode creation and related edges
+- Store's `visualElementsToGraph()`: No longer searches for graph node, creates default component
+- Fixed edge creation logic that was connecting to the removed graph node
+
+
 ## CSS Color Scheme Unification
 
 ### Issue: Inconsistent Color Schemes
@@ -399,3 +523,306 @@ When migrating components from `../builder` to graph-builder directory:
 **Issue**: After converting CSS variables from HSL to hex format, Tailwind was still wrapping them in `hsl()` functions
 **Solution**: Removed all `hsl()` wrappers from tailwind.config.js color definitions, except for chart colors which still use HSL format
 **Result**: Tailwind now directly uses hex color values from CSS variables, ensuring consistent color rendering
+
+## Edge Deletion via Keyboard Implementation
+
+### Custom Edge Change Handler
+- Created `handleEdgesChange` function to intercept ReactFlow edge changes
+- Separates deletion changes (`type === 'remove'`) from other changes
+- Uses store methods for deletions, allows ReactFlow to handle other changes
+- Proper TypeScript typing with `EdgeChange<CustomEdge>[]`
+
+### Store Integration for Edge Deletion
+- Deletions update store state directly using `useGraphBuilderStore.getState().setEdges()`
+- Automatically adds to history for undo/redo support
+- Filtered edges exclude deleted edge IDs from current store state
+- Non-deletion changes (selection, hover, etc.) passed through to ReactFlow's `onEdgesChange`
+
+### Implementation Pattern
+```typescript
+const handleEdgesChange = useCallback(
+  (changes: EdgeChange<CustomEdge>[]) => {
+    const deleteChanges = changes.filter((change) => change.type === 'remove');
+    const otherChanges = changes.filter((change) => change.type !== 'remove');
+
+    if (deleteChanges.length > 0) {
+      const currentEdges = useGraphBuilderStore.getState().edges;
+      const edgesToDelete = deleteChanges.map((change) => change.id);
+      const filteredEdges = currentEdges.filter((edge) => !edgesToDelete.includes(edge.id));
+      
+      useGraphBuilderStore.getState().setEdges(filteredEdges);
+      useGraphBuilderStore.getState().addToHistory();
+    }
+
+    if (otherChanges.length > 0) {
+      onEdgesChange(otherChanges);
+    }
+  },
+  [onEdgesChange]
+);
+```
+
+### Integration Requirements
+- Import `EdgeChange` from `@xyflow/react`
+- Replace `onEdgesChange={onEdgesChange}` with `onEdgesChange={handleEdgesChange}` in ReactFlow component
+- Maintains existing keyboard delete functionality (`deleteKeyCode={["Backspace", "Delete"]}`)
+- Prevents store state from being overwritten by ReactFlow's direct state manipulation
+
+## Node Deletion via Keyboard Implementation
+
+### Custom Node Change Handler
+- Created `handleNodesChange` function to intercept ReactFlow node changes
+- Separates deletion changes (`type === 'remove'`) from other changes
+- Uses store's `deleteNode` method for deletions, allows ReactFlow to handle other changes
+- Proper TypeScript typing with `NodeChange<CustomNode>[]`
+
+### Store Integration for Node Deletion
+- Node deletions use store's `deleteNode(nodeId)` method which handles:
+  - Removing the node from nodes array
+  - Removing connected edges automatically
+  - Clearing selected node if it was deleted
+  - Adding to history for undo/redo support
+- Non-deletion changes (selection, hover, drag, etc.) passed through to ReactFlow's `onNodesChange`
+
+### Implementation Pattern
+```typescript
+const handleNodesChange = useCallback(
+  (changes: NodeChange<CustomNode>[]) => {
+    const deleteChanges = changes.filter((change) => change.type === 'remove');
+    const otherChanges = changes.filter((change) => change.type !== 'remove');
+
+    if (deleteChanges.length > 0) {
+      const nodesToDelete = deleteChanges.map((change) => change.id);
+      
+      nodesToDelete.forEach((nodeId) => {
+        deleteNode(nodeId);
+      });
+    }
+
+    if (otherChanges.length > 0) {
+      onNodesChange(otherChanges);
+    }
+  },
+  [onNodesChange, deleteNode]
+);
+```
+
+### Integration Requirements  
+- Import `NodeChange` from `@xyflow/react`
+- Import `deleteNode` from store methods
+- Replace `onNodesChange={onNodesChange}` with `onNodesChange={handleNodesChange}` in ReactFlow component
+- Store's `deleteNode` method automatically handles edge cleanup and selection state
+- Maintains existing keyboard delete functionality (`deleteKeyCode={["Backspace", "Delete"]}`)
+
+## Multi-Selection Implementation for Graph Builder
+
+### ReactFlow Multi-Selection Configuration
+- Added `multiSelectionKeyCode={["Shift"]}` to enable Shift+click multi-selection
+- Enabled `selectionOnDrag={true}` for drag-to-select range selection when Shift is held
+- Set `selectionMode={SelectionMode.Full}` to select elements fully within selection box
+- Configured `panOnDrag={true}` to allow canvas panning with left mouse button by default
+- Set `selectionKeyCode={["Shift"]}` so selection box only appears when Shift is held
+- Set `selectNodesOnDrag={false}` to prevent accidental selection during node dragging
+- Added `panActivationKeyCode={null}` to ensure no special key required for panning
+
+### Selection State Management
+- Added `selectedNodesCount` and `selectedEdgesCount` state variables
+- Created `handleSelectionChange` callback to track selection changes
+- Integrated selection tracking with component editor opening logic
+- Single node selection opens component editor, multiple selections close it
+
+### Keyboard Shortcuts Implementation
+- **Ctrl/Cmd+A**: Select all nodes and edges
+- **Escape**: Clear all selections  
+- **Delete/Backspace**: Delete all selected elements (bulk delete)
+- Keyboard event handling with proper event.preventDefault() for browser shortcuts
+
+### Visual Selection Feedback
+- Selection status indicator shows count of selected nodes and edges
+- Blue badge appears in toolbar when elements are selected
+- Clear selection button (X) with tooltip showing Esc shortcut
+- Proper pluralization for node/nodes and edge/edges display
+
+### Bulk Operations Support
+- `handleBulkDelete()` function for deleting multiple selected elements
+- Separate handling for nodes (using store deleteNode method) and edges
+- Proper history tracking for undo/redo functionality
+- Enhanced delete key handling to work with bulk selections
+
+### User Experience Enhancements
+- Visual feedback with selection count display
+- Keyboard shortcuts clearly indicated in tooltips
+- Prevents component editor opening when multiple nodes selected
+- Seamless integration with existing graph builder functionality
+- Proper ReactFlow event handling without conflicts
+- **Drag Selection Box**: Blue rounded selection box with semi-transparent background
+- **Hover Feedback**: Ring highlights on hoverable elements during selection
+- **Partial Selection Mode**: Selects elements even if only partially within selection box
+
+### Technical Implementation Details
+- Selection change handler updates both node and edge counts
+- Bulk delete operations maintain store state consistency
+- Keyboard shortcuts only active when graph builder is focused
+- Selection state properly synchronized between ReactFlow and store
+- Clear separation between single-selection and multi-selection behaviors
+
+### SelectionBox Toolbar Component
+- Created `SelectionBox.tsx` component that appears above selected elements
+- Uses ReactFlow's `NodeToolbar` component positioned at top of selection
+- Features provided:
+  - **Selection count display**: Shows number of selected nodes and edges
+  - **Delete**: Remove selected elements with proper store integration
+  - **Duplicate**: Copy selected nodes with 50px offset
+  - **Align horizontal/vertical**: Center-align multiple nodes (2+ nodes)
+  - **Distribute horizontal/vertical**: Evenly space multiple nodes (3+ nodes)
+- Styling:
+  - Tailwind CSS for dark mode support
+  - Smooth slide-down animation on appearance
+  - Hover states for all action buttons
+  - Grouped actions with visual separators
+- Integration:
+  - Uses `useStore` hook to track selections without re-renders
+  - Integrates with `useGraphBuilderStore` for proper history tracking
+  - Positioned using `Position.Top` enum from ReactFlow
+  - Added `nodrag` and `nopan` classes to prevent toolbar interaction issues
+- Replaced old selection indicator in header with new floating toolbar
+
+## Mistake: Store Subscription Overwriting ReactFlow Selection and Position State
+**Wrong**:
+```
+React.useEffect(() => {
+  const unsubscribe = useGraphBuilderStore.subscribe((state) => {
+    setNodes(state.nodes);  // This overwrites local selection AND position state
+    setEdges(state.edges);  // This overwrites local selection state
+  });
+  return unsubscribe;
+}, [setNodes, setEdges]);
+```
+
+**Problem**: When a node is selected or moved, it triggers store updates (like `setSelectedNode`), which causes the subscription to overwrite local ReactFlow state with store state, losing both selection information and node positions, causing canvas to flash and nodes to snap back to original positions.
+
+**Correct**:
+```
+React.useEffect(() => {
+  const unsubscribe = useGraphBuilderStore.subscribe((state) => {
+    // Preserve selection and position state when updating from store
+    setNodes(currentNodes => {
+      const selectionMap = new Map();
+      const positionMap = new Map();
+      currentNodes.forEach(node => {
+        if (node.selected) selectionMap.set(node.id, true);
+        positionMap.set(node.id, node.position);
+      });
+      
+      return state.nodes.map(node => ({
+        ...node,
+        selected: selectionMap.has(node.id) || false,
+        position: positionMap.get(node.id) || node.position
+      }));
+    });
+    
+    setEdges(currentEdges => {
+      const edgeSelectionMap = new Map();
+      currentEdges.forEach(edge => {
+        if (edge.selected) edgeSelectionMap.set(edge.id, true);
+      });
+      
+      return state.edges.map(edge => ({
+        ...edge,
+        selected: edgeSelectionMap.has(edge.id) || false
+      }));
+    });
+  });
+  return unsubscribe;
+}, [setNodes, setEdges]);
+```
+
+**Solution**: Use functional updates to preserve current selection AND position state when applying store updates, preventing loss of ReactFlow state and eliminating canvas flashing and node position resets.
+
+## Mistake: Duplicate Store Subscription in SelectionBox Component
+**Problem**: The SelectionBox component had a duplicate store subscription that was conflicting with the main graphbuilder's subscription, causing canvas flashing and lost selections during shift+drag multi-select.
+
+**Wrong**:
+```typescript
+// SelectionBox.tsx - This duplicate subscription caused the issue
+React.useEffect(() => {
+  const unsubscribe = useGraphBuilderStore.subscribe((state) => {
+    // This overwrites ReactFlow's local selection state
+    setNodes(currentNodes => { /* ... */ });
+    setEdges(currentEdges => { /* ... */ });
+  });
+  return unsubscribe;
+}, [setNodes, setEdges]);
+```
+
+**Correct**:
+```typescript
+// SelectionBox.tsx - Only handle selection UI, don't manage state sync
+export default function SelectionBox() {
+  const { setNodes, setEdges, deleteElements } = useReactFlow();
+  const deleteNode = useGraphBuilderStore((state) => state.deleteNode);
+  const addToHistory = useGraphBuilderStore((state) => state.addToHistory);
+  
+  // Use useStore to get selected elements (read-only)
+  const selectedNodes = useStore((state) => {
+    return state.nodes.filter((node: Node) => node.selected);
+  });
+  // ... rest of component only handles UI actions
+}
+```
+
+**Key Fix**: Removed the duplicate store subscription from SelectionBox. State synchronization should only happen in one place (main graphbuilder component).
+
+## Mistake: Overly Sensitive Drag Selection  
+**Problem**: Drag selection was triggering with small mouse movements and selecting the entire graph unintentionally, causing flashy visual behavior.
+
+**Wrong**:
+```
+selectionMode={SelectionMode.Partial}  // Too permissive
+selectionOnDrag={true}                 // No activation constraints
+```
+
+**Correct**:
+```
+selectionMode={SelectionMode.Full}     // Requires full containment
+selectionKeyCode={["Shift"]}           // Requires Shift key to activate
+selectionOnDrag={true}                 // Still enabled but constrained
+```
+
+**Visual Improvements**:
+- Reduced selection box border thickness and opacity
+- Added subtle transition and backdrop-filter for smoother appearance
+- Added user guidance tip: "Hold Shift + drag to select multiple elements"
+- Made selection box less prominent to reduce visual flash
+
+**User Experience**: Selection now requires intentional Shift+drag action, preventing accidental selections while maintaining powerful multi-selection capabilities.
+
+## Follow-up Fix: Autolayout Blocked by Position Preservation
+**Problem**: After implementing position preservation, the autolayout feature stopped working because it was preserving old local positions even when the layout function had calculated new organized positions.
+
+**Solution**: Added intelligent detection of layout operations vs. normal updates:
+
+```typescript
+// Check if this looks like a bulk layout operation
+let nodesWithSignificantChanges = 0;
+state.nodes.forEach(node => {
+  const currentPosition = positionMap.get(node.id);
+  if (currentPosition && (
+    Math.abs(currentPosition.x - node.position.x) > 30 ||
+    Math.abs(currentPosition.y - node.position.y) > 30
+  )) {
+    nodesWithSignificantChanges++;
+  }
+});
+
+// If many nodes changed position significantly, it's likely a layout operation
+const isLayoutOperation = nodesWithSignificantChanges >= Math.min(3, state.nodes.length * 0.5);
+
+// Use store position if it's a layout operation, otherwise preserve current position
+position: isLayoutOperation ? node.position : (currentPosition || node.position)
+```
+
+**Key Logic**: 
+- **Individual Node Moves**: Preserve local positions (user is dragging)
+- **Bulk Position Changes**: Use store positions (layout operation)
+- **Threshold**: 30+ pixel movement on 50%+ of nodes indicates layout operation

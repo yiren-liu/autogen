@@ -42,6 +42,7 @@ import {
   isSelectorTeam,
   isWebSurferAgent,
 } from "../../../types/guards";
+import GroupNode from './GroupNode';
 
 // Icon mapping for different node types
 export const iconMap: Record<
@@ -490,6 +491,7 @@ export const nodeTypes = {
   tool: SimpleNode,
   termination: SimpleNode,
   custom: SimpleNode, // For any custom nodes
+  group: GroupNode, // Group node type
 };
 
 const EDGE_STYLES = {
@@ -621,6 +623,166 @@ const EdgeConditionLabel: React.FC<EdgeConditionLabelProps> = ({
   );
 };
 
+// Bidirectional edge condition label component with two conditions
+interface BidirectionalEdgeConditionLabelProps {
+  edgeId: string;
+  inCondition?: string;
+  outCondition?: string;
+  edgePath: string;
+}
+
+const BidirectionalEdgeConditionLabel: React.FC<BidirectionalEdgeConditionLabelProps> = ({
+  edgeId,
+  inCondition,
+  outCondition,
+  edgePath,
+}) => {
+  const [editingIn, setEditingIn] = React.useState(false);
+  const [editingOut, setEditingOut] = React.useState(false);
+  const [editInValue, setEditInValue] = React.useState(inCondition || "");
+  const [editOutValue, setEditOutValue] = React.useState(outCondition || "");
+  const updateEdgeData = useGraphBuilderStore((state) => state.updateEdgeData);
+
+  // Calculate positions along the edge path (1/3 and 2/3 of the path)
+  const pathElement = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  pathElement.setAttribute("d", edgePath);
+  const pathLength = pathElement.getTotalLength();
+  const inPoint = pathElement.getPointAtLength(pathLength / 3);
+  const outPoint = pathElement.getPointAtLength(pathLength * 2 / 3);
+
+  const handleInSave = () => {
+    updateEdgeData(edgeId, {
+      condition: editInValue.trim() || undefined,
+    });
+    setEditingIn(false);
+  };
+
+  const handleOutSave = () => {
+    updateEdgeData(edgeId, {
+      outCondition: editOutValue.trim() || undefined,
+    });
+    setEditingOut(false);
+  };
+
+  const handleInCancel = () => {
+    setEditInValue(inCondition || "");
+    setEditingIn(false);
+  };
+
+  const handleOutCancel = () => {
+    setEditOutValue(outCondition || "");
+    setEditingOut(false);
+  };
+
+  const handleInKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleInSave();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleInCancel();
+    }
+  };
+
+  const handleOutKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleOutSave();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleOutCancel();
+    }
+  };
+
+  const renderConditionLabel = (
+    condition: string | undefined,
+    isEditing: boolean,
+    editValue: string,
+    position: { x: number; y: number },
+    direction: "in" | "out",
+    onEdit: () => void,
+    onSave: () => void,
+    onChange: (value: string) => void,
+    onKeyDown: (e: React.KeyboardEvent) => void
+  ) => {
+    const arrow = direction === "in" ? "→" : "←";
+    const bgColor = direction === "in" ? "bg-green-100 border-green-300 hover:bg-green-200" : "bg-blue-100 border-blue-300 hover:bg-blue-200";
+    const label = direction === "in" ? "In" : "Out";
+
+    return (
+      <div
+        style={{
+          position: "absolute",
+          transform: `translate(-50%, -50%) translate(${position.x}px,${position.y}px)`,
+          pointerEvents: "all",
+        }}
+        className="edge-condition-label"
+      >
+        {isEditing ? (
+          <div className="flex items-center gap-1 bg-white border border-gray-300 rounded px-2 py-1 shadow-sm">
+            <span className="text-xs text-gray-500">{arrow}</span>
+            <input
+              type="text"
+              value={editValue}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={onKeyDown}
+              onBlur={onSave}
+              autoFocus
+              className="text-xs border-none outline-none bg-transparent min-w-[60px]"
+              placeholder={`${label} condition`}
+              style={{ fontSize: "11px" }}
+            />
+          </div>
+        ) : condition ? (
+          <div
+            onClick={onEdit}
+            className={`flex items-center gap-1 border rounded px-2 py-1 cursor-pointer transition-colors ${bgColor}`}
+            style={{ fontSize: "11px" }}
+          >
+            <span className="text-xs font-semibold">{arrow}</span>
+            <span>{condition}</span>
+          </div>
+        ) : (
+          <button
+            onClick={onEdit}
+            className="bg-gray-50 hover:bg-gray-100 border-2 border-dashed border-gray-300 hover:border-gray-400 rounded-full w-8 h-8 flex items-center justify-center cursor-pointer transition-all opacity-60 hover:opacity-100"
+            title={`Add ${label.toLowerCase()} condition (${arrow})`}
+          >
+            <span className="text-gray-500 text-sm font-bold">+</span>
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <EdgeLabelRenderer>
+      {renderConditionLabel(
+        inCondition,
+        editingIn,
+        editInValue,
+        inPoint,
+        "in",
+        () => setEditingIn(true),
+        handleInSave,
+        setEditInValue,
+        handleInKeyDown
+      )}
+      {renderConditionLabel(
+        outCondition,
+        editingOut,
+        editOutValue,
+        outPoint,
+        "out",
+        () => setEditingOut(true),
+        handleOutSave,
+        setEditOutValue,
+        handleOutKeyDown
+      )}
+    </EdgeLabelRenderer>
+  );
+};
+
 export const CustomEdge = ({
   type,
   data,
@@ -735,9 +897,10 @@ export const BidirectionalEdge = ({
         className="react-flow__edge-bidirectional"
         {...validPathProps}
       />
-      <EdgeConditionLabel
+      <BidirectionalEdgeConditionLabel
         edgeId={props.id}
-        condition={data?.condition as string | undefined}
+        inCondition={data?.condition as string | undefined}
+        outCondition={data?.outCondition as string | undefined}
         edgePath={edgePath}
       />
     </>

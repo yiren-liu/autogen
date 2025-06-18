@@ -7,6 +7,10 @@
 - Visual status badges showing model names instead of generic "Has Model"
 - Smooth transitions and hover effects for better UX
 - Hover-to-add functionality on right handles: hover over source handle shows Add button with dropdown menu to add new agent nodes with automatic connection
+- Multi-selection support: Hold Shift to select multiple nodes/edges with visual feedback and bulk operations (Ctrl+A to select all, Esc to clear, Delete for bulk delete)
+- Natural canvas interaction: Drag to pan canvas by default, Shift+drag for multi-selection (intuitive workflow)
+- SelectionBox toolbar: Floating toolbar appears above selected elements with actions (delete, duplicate, align, distribute) for enhanced node management
+- Node grouping/ungrouping: Select multiple nodes and group them into resizable containers named "Component X". Groups preserve original component data and edges for later access and computation. Prevents double grouping for cleaner organization. Internal edges remain visible within groups.
 
 ## Code Architecture Patterns
 - Follow existing teambuilder structure when creating new builders

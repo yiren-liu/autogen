@@ -34,6 +34,10 @@ interface GraphBuilderState {
   setSelectedNode: (nodeId: string | null) => void;
   updateEdgeData: (edgeId: string, data: Record<string, any>) => void;
   
+  // Grouping actions
+  createGroup: (nodeIds: string[], edgeIds: string[], groupName?: string) => string;
+  ungroupNodes: (groupId: string) => void;
+  
   // Graph-specific actions
   addGraphEdge: (sourceId: string, targetId: string, condition?: string) => void;
   removeGraphEdge: (sourceId: string, targetId: string) => void;
@@ -58,21 +62,8 @@ const graphToVisualElements = (component: Component<GraphConfig>) => {
   const nodes: CustomNode[] = [];
   const edges: CustomEdge[] = [];
 
-  // Add the main graph node
-  const mainNode: CustomNode = {
-    id: "graph",
-    type: "graph",
-    position: { x: 250, y: 50 },
-    data: {
-      component: {
-        ...component,
-        component_type: "graph",
-      },
-      label: component.label || "Graph",
-      type: "graph",
-    },
-  };
-  nodes.push(mainNode);
+  // Note: We don't create a main graph node as it's not needed for the visual builder
+  // The graph metadata is stored separately and managed by the component props
 
   // Add participant nodes
   component.config.participants?.forEach((participant, index) => {
@@ -111,13 +102,7 @@ const graphToVisualElements = (component: Component<GraphConfig>) => {
     };
     nodes.push(terminationNode);
 
-    // Add edge from graph to termination
-    edges.push({
-      id: "graph-termination",
-      source: "graph", 
-      target: "termination",
-      type: "graph-connection",
-    });
+    // Note: No edges to/from termination node since we removed the main graph node
   }
 
   // Convert DiGraph edges to visual edges
@@ -142,13 +127,17 @@ const graphToVisualElements = (component: Component<GraphConfig>) => {
           if (reverseExists && !processedPairs.has(pairKey)) {
             // Create bidirectional edge
             processedPairs.add(pairKey);
+            const reverseEdge = graphConfig.graph.nodes[edge.target]?.edges.find(
+              reverseEdge => reverseEdge.target === nodeName
+            );
             edges.push({
               id: `${sourceNodeId}-${targetNodeId}-bidirectional`,
               source: sourceNodeId,
               target: targetNodeId,
               type: "bidirectional",
-              data: {
+              data: { // take the in and out edge data, and form bidirectional edge data 
                 condition: edge.condition || undefined,
+                outCondition: reverseEdge?.condition || undefined,
               },
             });
           } else if (!reverseExists && !processedPairs.has(pairKey)) {
@@ -183,9 +172,6 @@ const findNodeIdByName = (nodes: CustomNode[], name: string): string | null => {
 
 // Helper to convert visual elements back to graph structure
 const visualElementsToGraph = (nodes: CustomNode[], edges: CustomEdge[]): Component<GraphConfig> | null => {
-  const graphNode = nodes.find(n => n.data.type === "graph");
-  if (!graphNode) return null;
-
   const participants: Component<AgentConfig>[] = [];
   let termination_condition: Component<TerminationConfig> | undefined;
   let max_turns: number | undefined;
@@ -198,6 +184,11 @@ const visualElementsToGraph = (nodes: CustomNode[], edges: CustomEdge[]): Compon
       termination_condition = node.data.component as Component<TerminationConfig>;
     }
   });
+
+  // If no participants, return null (empty graph)
+  if (participants.length === 0) {
+    return null;
+  }
 
   // Build DiGraph structure from visual edges
   const diGraphNodes: Record<string, DiGraphNode> = {};
@@ -234,9 +225,10 @@ const visualElementsToGraph = (nodes: CustomNode[], edges: CustomEdge[]): Compon
         if (diGraphNodes[targetName]) {
           diGraphNodes[targetName].edges.push({
             target: sourceName,
-            condition: edge.data?.condition || undefined
+            condition: edge.data?.outCondition || undefined
           });
         }
+        console.log(diGraphNodes);
       } else {
         // Normal unidirectional edge
         if (diGraphNodes[sourceName]) {
@@ -254,18 +246,14 @@ const visualElementsToGraph = (nodes: CustomNode[], edges: CustomEdge[]): Compon
     default_start_node: (participants[0]?.config as any)?.name || participants[0]?.label
   };
 
-  // Get max_turns from original graph node if it exists
-  if (graphNode.data.component.config && 'max_turns' in graphNode.data.component.config) {
-    max_turns = (graphNode.data.component.config as GraphConfig).max_turns;
-  }
-
+  // Create a default graph component since we no longer have a main graph node
   const component: Component<GraphConfig> = {
-    provider: graphNode.data.component.provider || "autogen_agentchat.teams.GraphFlow", 
+    provider: "autogen_agentchat.teams.GraphFlow", 
     component_type: "graph",
-    version: graphNode.data.component.version || 1,
-    component_version: graphNode.data.component.component_version || 1,
-    description: graphNode.data.component.description || "A graph-based conversation flow",
-    label: graphNode.data.component.label || "Graph",
+    version: 1,
+    component_version: 1,
+    description: "A graph-based conversation flow",
+    label: "Graph Flow",
     config: {
       participants,
       termination_condition,
@@ -504,6 +492,133 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
 
       set({ nodes: layoutedNodes });
       get().addToHistory();
+    },
+
+    createGroup: (nodeIds, edgeIds, groupName) => {
+      const { nodes, edges } = get();
+      const groupId = `group-${generateId()}`;
+      
+      // Get the nodes to be grouped
+      const nodesToGroup = nodes.filter(node => nodeIds.includes(node.id));
+      const edgesToGroup = edges.filter(edge => edgeIds.includes(edge.id));
+      
+      if (nodesToGroup.length === 0) return groupId;
+      
+      // Check if any nodes are already grouped (have parentId)
+      const alreadyGroupedNodes = nodesToGroup.filter(node => node.parentId);
+      if (alreadyGroupedNodes.length > 0) {
+        console.warn('Cannot group nodes that are already part of a group:', alreadyGroupedNodes.map(n => n.id));
+        return groupId; // Return without creating group
+      }
+      
+      // Calculate the bounding box of selected nodes
+      const bounds = nodesToGroup.reduce(
+        (acc, node) => ({
+          minX: Math.min(acc.minX, node.position.x),
+          minY: Math.min(acc.minY, node.position.y),
+          maxX: Math.max(acc.maxX, node.position.x + 200), // Assuming node width ~200
+          maxY: Math.max(acc.maxY, node.position.y + 100), // Assuming node height ~100
+        }),
+        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+      );
+      
+      // Create group node
+      const groupNode: CustomNode = {
+        id: groupId,
+        type: 'group',
+        position: { x: bounds.minX - 20, y: bounds.minY - 20 },
+        data: {
+          label: groupName || `Component Group ${nodesToGroup.length}`,
+          type: 'group',
+          component: {} as any, // Placeholder
+          groupedComponents: nodesToGroup.map(node => ({
+            id: node.id,
+            component: node.data.component,
+            type: node.data.type,
+            label: node.data.label,
+          })),
+          groupedEdges: edgesToGroup.map(edge => ({
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            type: edge.type,
+            data: edge.data,
+          })),
+        },
+        style: {
+          width: bounds.maxX - bounds.minX + 40,
+          height: bounds.maxY - bounds.minY + 40,
+        },
+      };
+      
+      // Update nodes: add group node and set parent relationships
+      const updatedNodes = [
+        ...nodes.filter(node => !nodeIds.includes(node.id)),
+        groupNode,
+        ...nodesToGroup.map(node => ({
+          ...node,
+          parentId: groupId,
+          extent: 'parent' as const,
+          // Adjust position to be relative to group
+          position: {
+            x: node.position.x - bounds.minX + 20,
+            y: node.position.y - bounds.minY + 20,
           },
+        }))
+      ];
+      
+      // Keep all edges visible - don't remove internal edges
+      // Internal edges will remain visible within the group
+      const updatedEdges = edges;
+      
+      set({ 
+        nodes: updatedNodes, 
+        edges: updatedEdges 
+      });
+      get().addToHistory();
+      
+      return groupId;
+    },
+
+    ungroupNodes: (groupId) => {
+      const { nodes, edges } = get();
+      
+      const groupNode = nodes.find(node => node.id === groupId);
+      if (!groupNode || groupNode.type !== 'group') return;
+      
+      const childNodes = nodes.filter(node => node.parentId === groupId);
+      const groupData = groupNode.data as any;
+      
+      // Restore child nodes to their absolute positions
+      const restoredNodes = childNodes.map(node => ({
+        ...node,
+        parentId: undefined,
+        extent: undefined,
+        position: {
+          x: groupNode.position.x + node.position.x,
+          y: groupNode.position.y + node.position.y,
+        },
+      }));
+      
+      // Restore internal edges if they exist in the group data
+      const restoredEdges = groupData.groupedEdges || [];
+      
+      // Update the store
+      const updatedNodes = [
+        ...nodes.filter(node => node.id !== groupId && node.parentId !== groupId),
+        ...restoredNodes,
+      ];
+      
+      const updatedEdges = [
+        ...edges,
+        ...restoredEdges,
+      ];
+      
+      set({ 
+        nodes: updatedNodes, 
+        edges: updatedEdges 
+      });
+      get().addToHistory();
+    },
   }))
 );
