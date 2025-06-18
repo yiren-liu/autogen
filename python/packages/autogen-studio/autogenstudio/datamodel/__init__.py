@@ -1,4 +1,4 @@
-from .db import BaseDBModel, Gallery, Message, Run, RunStatus, Session, Settings, Team, Graph
+from .db import BaseDBModel, Gallery, Message, Run, RunStatus, Session, Settings, Team, Graph, Group, TestCase
 from .types import (
     EnvironmentVariable,
     GalleryComponents,
@@ -15,10 +15,12 @@ from .types import (
 
 __all__ = [
     "Team",
+    "Graph",
+    "Group",
+    "TestCase",
     "Run",
     "RunStatus",
     "Session",
-    "Team",
     "Message",
     "MessageConfig",
     "MessageMeta",

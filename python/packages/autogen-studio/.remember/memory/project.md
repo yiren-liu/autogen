@@ -11,6 +11,7 @@
 - Natural canvas interaction: Drag to pan canvas by default, Shift+drag for multi-selection (intuitive workflow)
 - SelectionBox toolbar: Floating toolbar appears above selected elements with actions (delete, duplicate, align, distribute) for enhanced node management
 - Node grouping/ungrouping: Select multiple nodes and group them into resizable containers named "Component X". Groups preserve original component data and edges for later access and computation. Prevents double grouping for cleaner organization. Internal edges remain visible within groups.
+- Group persistence: Simplified API design for saving, managing, and reusing groups (single or multiple nodes) with associated test cases across different graphs.
 
 ## Code Architecture Patterns
 - Follow existing teambuilder structure when creating new builders
@@ -44,3 +45,21 @@
 - Both design systems respect the global darkMode context
 - Adobe Spectrum components available throughout the application without additional setup
 - When developing the GraphBuilder, use Adobe Specturm components as much as possible
+
+## Group Management Architecture (Simplified)
+- Single unified "Group" concept - no separate component entities
+- Groups can contain one or more nodes (agents, models, tools, etc.) with their edges
+- Node configurations embedded directly within groups
+- Layout information stored with both absolute and relative positioning
+- Test cases can target groups or entire graphs only
+- Version control and public/private sharing built into group system
+- Maintain consistency with existing Team/Graph API patterns (status/data responses)
+
+## LLM-as-a-Judge Test Case System
+- Redesigned for range-based scoring instead of assertion-based testing
+- Test cases include: context (scenario), input_query (prompt), oracles (expected/negative examples), scoring_rubrics (criteria/ranges)
+- Judge configuration supports different LLM models with temperature and prompt customization
+- Execution workflow: target system → collect output → LLM judge evaluation → scores/rationales
+- Results structure includes overall scores, rubric-specific breakdowns, judge rationale, and confidence levels
+- Test case history stored in latest_execution field for tracking improvements over time
+- API supports judge overrides for testing different evaluation approaches

@@ -58,6 +58,47 @@ class Graph(BaseDBModel, table=True):
     component: Union[ComponentModel, dict] = Field(sa_column=Column(JSON))
 
 
+class Group(BaseDBModel, table=True):
+    __table_args__ = {"sqlite_autoincrement": True}
+    name: str
+    description: Optional[str] = None
+    nodes: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    edges: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    layout_info: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    tags: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    is_public: bool = Field(default=False)
+    group_version: Optional[str] = Field(default="1.0.0")
+
+
+class TestCase(BaseDBModel, table=True):
+    __table_args__ = {"sqlite_autoincrement": True}
+    name: str
+    description: Optional[str] = None
+    test_type: str = "llm_judge"  # llm_judge, performance, integration
+    target_type: str  # group, graph
+    target_id: int
+    
+    # LLM-as-a-Judge specific inputs
+    context: str = Field(description="Background context for the test scenario")
+    input_query: str = Field(description="User query or prompt being tested")
+    oracles: dict = Field(sa_column=Column(JSON), description="Expected and negative examples")
+    scoring_rubrics: List[dict] = Field(default_factory=list, sa_column=Column(JSON), description="Criteria and scoring ranges for LLM judge")
+    
+    # Judge configuration
+    judge_config: dict = Field(sa_column=Column(JSON), description="LLM judge model and parameters")
+    
+    # Execution settings
+    timeout: Optional[int] = Field(default=120)
+    retry_count: Optional[int] = Field(default=1)
+    
+    # Metadata
+    tags: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    is_active: bool = Field(default=True)
+    
+    # Results (populated after execution)
+    latest_execution: Optional[dict] = Field(default=None, sa_column=Column(JSON), description="Latest test execution results")
+
+
 class Message(BaseDBModel, table=True):
     __table_args__ = {"sqlite_autoincrement": True}
 

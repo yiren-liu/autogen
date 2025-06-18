@@ -66,4 +66,6 @@ async def create_graph(graph: Graph, db=Depends(get_db)) -> Dict:
 async def delete_graph(graph_id: int, user_id: str, db=Depends(get_db)) -> Dict:
     """Delete a graph"""
     db.delete(filters={"id": graph_id, "user_id": user_id}, model_class=Graph)
-    return {"status": True, "message": "Graph deleted successfully"} 
+    return {"status": True, "message": "Graph deleted successfully"}
+
+

@@ -15,6 +15,8 @@ import useDetachNodes from './useDetachNodes';
 
 interface GroupNodeData {
   label: string;
+  type: string;
+  component: any; // Required by CustomNode but placeholder for groups
   groupedComponents: Array<{
     id: string;
     component: any;
@@ -28,6 +30,7 @@ interface GroupNodeData {
     type: string;
     data?: any;
   }>;
+  [key: string]: any; // Index signature for compatibility
 }
 
 interface GroupNode extends CustomNode {
@@ -65,7 +68,6 @@ function GroupNode({ id, data }: NodeProps<GroupNode>) {
         minWidth={200}
         minHeight={150}
         keepAspectRatio={false}
-        className="resize-control"
       />
       
       {/* Header */}

@@ -362,6 +362,147 @@ export interface Graph extends DBModel {
   component: Component<GraphConfig>;
 }
 
+// Group Types for Reusable Components
+export interface GroupNode {
+  id: string;
+  node_type: ComponentTypes;
+  node_config: ComponentConfig;
+  label: string;
+  position: {
+    x: number;
+    y: number;
+  };
+  relative_position: {
+    x: number;
+    y: number;
+  };
+}
+
+export interface GroupEdge {
+  id: string;
+  source_node_id: string;
+  target_node_id: string;
+  edge_type: string;
+  edge_data?: Record<string, any>;
+}
+
+export interface GroupLayoutInfo {
+  bounds: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+export interface GroupConfig {
+  nodes: GroupNode[];
+  edges: GroupEdge[];
+  layout_info?: GroupLayoutInfo;
+}
+
+export interface Group extends DBModel {
+  name: string;
+  description?: string;
+  nodes: GroupNode[];
+  edges: GroupEdge[];
+  layout_info?: GroupLayoutInfo;
+  tags?: string[];
+  is_public?: boolean;
+  group_version?: string;
+}
+
+// Test Case Types for LLM-as-a-Judge
+export type TestType = "llm_judge" | "performance" | "integration";
+export type TargetType = "group" | "graph";
+
+export interface ScoringRubric {
+  name: string;
+  description: string;
+  max_score: number;
+  criteria: string[];
+  score_ranges: Array<{
+    min_score: number;
+    max_score: number;
+    description: string;
+  }>;
+}
+
+export interface JudgeConfig {
+  model: string;
+  temperature?: number;
+  max_tokens?: number;
+  system_prompt?: string;
+}
+
+export interface TestOracles {
+  expected_examples: string[];
+  negative_examples: string[];
+  reference_answers?: string[];
+}
+
+export interface TestCase extends DBModel {
+  name: string;
+  description?: string;
+  test_type: TestType;
+  target_type: TargetType;
+  target_id: number;
+  
+  // LLM-as-a-Judge specific inputs
+  context: string;
+  input_query: string;
+  oracles: TestOracles;
+  scoring_rubrics: ScoringRubric[];
+  
+  // Judge configuration
+  judge_config: JudgeConfig;
+  
+  // Execution settings
+  timeout?: number;
+  retry_count?: number;
+  
+  // Metadata
+  tags?: string[];
+  is_active?: boolean;
+  
+  // Results
+  latest_execution?: TestExecutionResult;
+}
+
+export interface JudgeScoreResult {
+  rubric_name: string;
+  score: number;
+  max_score: number;
+  rationale: string;
+}
+
+export interface TestExecutionResult {
+  test_case_id: number;
+  status: "completed" | "failed" | "error" | "timeout";
+  execution_time: number;
+  target_output?: {
+    response: string;
+    metadata?: Record<string, any>;
+  } | null;
+  judge_results?: {
+    overall_score: number;
+    scores_breakdown: JudgeScoreResult[];
+    judge_rationale: string;
+    judge_confidence: number;
+  } | null;
+  logs?: string[];
+  error_message?: string;
+  executed_at: string;
+}
+
+export interface TestExecutionError extends Error {
+  type: "VALIDATION_ERROR" | "NOT_FOUND_ERROR" | "TIMEOUT_ERROR" | "EXECUTION_ERROR" | "NETWORK_ERROR" | "API_ERROR" | "UNKNOWN_ERROR" | "UNEXPECTED_ERROR";
+  status?: number;
+  statusText?: string;
+  userMessage: string;
+  originalError?: unknown;
+}
+
 export interface Session extends DBModel {
   user_id: string;
   team_id?: number;
