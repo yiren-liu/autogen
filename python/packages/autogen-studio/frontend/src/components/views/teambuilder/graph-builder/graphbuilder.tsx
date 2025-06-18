@@ -855,10 +855,14 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
               >
                 {rightPanelMode === 'component' && selectedNodeId && (
                   <>
-                    {nodes.find((n) => n.id === selectedNodeId)?.data.component && (
+                    {nodes.find((n) => {
+                      return n.id === selectedNodeId && n.type !== 'group'
+                    })?.data.component && (
                       <ComponentEditor
                         component={
-                          nodes.find((n) => n.id === selectedNodeId)!.data.component
+                          nodes.find((n) => {
+                            return n.id === selectedNodeId
+                          })!.data.component
                         }
                         onChange={(updatedComponent) => {
                           if (selectedNodeId) {
@@ -870,7 +874,8 @@ export const GraphBuilder: React.FC<GraphBuilderProps> = ({
                         }}
                         navigationDepth={true}
                       />
-                    )}
+                    )} 
+                    {/* TODO: add group editor */}
                   </>
                 )}
                 

@@ -11,7 +11,7 @@
 - Natural canvas interaction: Drag to pan canvas by default, Shift+drag for multi-selection (intuitive workflow)
 - SelectionBox toolbar: Floating toolbar appears above selected elements with actions (delete, duplicate, align, distribute) for enhanced node management
 - Node grouping/ungrouping: Select multiple nodes and group them into resizable containers named "Component X". Groups preserve original component data and edges for later access and computation. Prevents double grouping for cleaner organization. Internal edges remain visible within groups.
-- Group persistence: Simplified API design for saving, managing, and reusing groups (single or multiple nodes) with associated test cases across different graphs.
+- Group persistence: Groups are automatically saved to backend database when created and deleted when ungrouped. Full API integration with user authentication and error handling. Groups can be reused across different graphs and sessions.
 
 ## Code Architecture Patterns
 - Follow existing teambuilder structure when creating new builders
@@ -46,13 +46,14 @@
 - Adobe Spectrum components available throughout the application without additional setup
 - When developing the GraphBuilder, use Adobe Specturm components as much as possible
 
-## Group Management Architecture (Simplified)
-- Single unified "Group" concept - no separate component entities
+## Group Management Architecture
+- Single unified "Group" concept persisted to backend database
 - Groups can contain one or more nodes (agents, models, tools, etc.) with their edges
-- Node configurations embedded directly within groups
+- Node configurations embedded directly within groups with proper type mapping
 - Layout information stored with both absolute and relative positioning
-- Test cases can target groups or entire graphs only
-- Version control and public/private sharing built into group system
+- Full CRUD operations: create, read, update, delete groups via GroupAPI
+- User authentication integrated: groups are user-specific and require userId for API calls
+- Error handling: local operations continue even if backend API calls fail
 - Maintain consistency with existing Team/Graph API patterns (status/data responses)
 
 ## LLM-as-a-Judge Test Case System

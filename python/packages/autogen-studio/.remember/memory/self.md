@@ -1,5 +1,39 @@
 # Graph Builder Implementation
 
+## Group API Integration Implementation
+
+### Backend Group Persistence
+**Implementation**:
+- Modified `useGraphBuilderStore` to integrate with GroupAPI for persistence
+- Added async `createGroup` and `ungroupNodes` functions that call backend APIs
+- Added `userId` state tracking in store for API authentication
+- Created proper Group data structure mapping from visual nodes/edges to database format
+
+**API Integration Pattern**:
+- `createGroup`: Maps visual nodes to GroupNode format with proper type casting and positioning
+- `ungroupNodes`: Extracts numeric group ID for API deletion calls
+- Error handling: Continues with local operations even if API calls fail
+- User context integration: Uses appContext to get userId for API authentication
+
+**Data Structure Mapping**:
+- Visual nodes → GroupNode: Maps component configs, positions, and types properly
+- Visual edges → GroupEdge: Maps source/target relationships and edge data
+- Layout info: Calculates bounding boxes for group positioning
+- Type safety: Proper casting of labels and component types for database storage
+
+### Frontend User Context Integration
+**SelectionBox Component Updates**:
+- Added appContext import and usage for user authentication
+- Modified handleGroup and handleUngroup to be async functions
+- Added userId synchronization with store on user context changes
+- Error handling with console logging while maintaining local functionality
+
+**Authentication Flow**:
+- SelectionBox component imports appContext and AppContextType
+- useEffect hook syncs user.id with store.userId when user changes
+- Store methods check userId availability before making API calls
+- Graceful degradation: Local grouping continues even if API fails
+
 ## LLM-as-a-Judge Test Case System Implementation
 
 ### Database Model Redesign (db.py)
@@ -147,6 +181,69 @@ const onConnect = useCallback(
 );
 ```
 
+## Mistake: ReactFlow State Synchronization During Ungrouping
+**Wrong**:
+```
+// useDetachNodes hook was directly manipulating ReactFlow state
+function useDetachNodes() {
+  const { getNodes, setNodes } = useReactFlow();
+  const addToHistory = useGraphBuilderStore((state) => state.addToHistory);
+
+  return useCallback(
+    (childNodeIds: string[], groupNodeId: string) => {
+      // ... ungrouping logic ...
+      
+      // This bypassed the store and caused state sync issues
+      setNodes(updatedNodes);
+      addToHistory();
+    },
+    [getNodes, setNodes, addToHistory]
+  );
+}
+
+// GroupNode component used detachNodes hook instead of store method
+const onUngroup = () => {
+  const childNodeIds = getNodes()
+    .filter((node) => node.parentId === id)
+    .map((node) => node.id);
+
+  detachNodes(childNodeIds, id);
+};
+```
+
+**Correct**:
+```
+// Use store's ungroupNodes method instead of detachNodes hook
+function GroupNode({ id }: NodeProps<GroupNode>) {
+  const ungroupNodes = useGraphBuilderStore((state) => state.ungroupNodes);
+
+  const onUngroup = async () => {
+    try {
+      await ungroupNodes(id);
+    } catch (error) {
+      console.error('Failed to ungroup nodes:', error);
+      // Ungrouping will continue locally even if API fails
+    }
+  };
+}
+
+// Store's ungroupNodes properly manages both local and API state
+ungroupNodes: async (groupId) => {
+  // ... proper ungrouping logic with state management ...
+  set({ nodes: updatedNodes, edges: updatedEdges });
+  get().addToHistory();
+  
+  // API call with error handling
+  if (userId) {
+    try {
+      await groupAPI.deleteGroup(numericGroupId, userId);
+    } catch (error) {
+      console.error('Failed to delete group from backend:', error);
+    }
+  }
+}
+```
+
 ## TODO items
 - Migrate Builder components to GraphBuilder components (Done)
 - Simplify node interface in graph builder mode (Done)
@@ -162,7 +259,7 @@ const onConnect = useCallback(
   - Also support live-rendering + centering similar to Dify
 - Onclick node opens the node edit panel directly (instead of having to click edit button) (Dones)
 - Cursor moving over the right handle of each node will spawn a "Add" icon button, and if the user clicks, a drop-down menu will show up to allow user to choose "add an agent" or "cancel" as two options. If "add an agent" is chosen, add an new agent node to the graph connected to the node. (Done)
-- Persist component grouping to backend DB
+- Persist component grouping to backend DB (Done)
 
 
 ## Integrated Panel Implementation

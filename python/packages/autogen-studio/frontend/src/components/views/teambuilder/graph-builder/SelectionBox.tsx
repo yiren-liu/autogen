@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   useNodes,
   useEdges,
@@ -12,6 +12,7 @@ import {
 import { Trash2, Copy, AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter, Group, Ungroup } from 'lucide-react';
 import { useGraphBuilderStore } from './store';
 import { CustomNode, CustomEdge } from './types';
+import { appContext, AppContextType } from '../../../../hooks/provider';
 
 export default function SelectionBox() {
   const { getNodes, getEdges, setNodes, setEdges, deleteElements } = useReactFlow();
@@ -19,6 +20,15 @@ export default function SelectionBox() {
   const addToHistory = useGraphBuilderStore((state) => state.addToHistory);
   const createGroup = useGraphBuilderStore((state) => state.createGroup);
   const ungroupNodes = useGraphBuilderStore((state) => state.ungroupNodes);
+  const setUserId = useGraphBuilderStore((state) => state.setUserId);
+
+  // Get user context for API calls
+  const { user } = useContext(appContext) as AppContextType;
+
+  // Set userId in store when user changes
+  React.useEffect(() => {
+    setUserId(user?.id || null);
+  }, [user?.id, setUserId]);
 
   // Use useStore to get selected elements without causing re-renders
   const selectedNodes = useStore((state) => {
@@ -172,26 +182,37 @@ export default function SelectionBox() {
   };
 
   // Group selected nodes
-  const handleGroup = () => {
+  const handleGroup = async () => {
     if (selectedNodes.length < 2) return;
     
     const nodeIds = selectedNodes.map(node => node.id);
     const edgeIds = selectedEdges.map(edge => edge.id);
     
     const groupName = `Component ${selectedNodes.length}`;
-    createGroup(nodeIds, edgeIds, groupName);
+    
+    try {
+      await createGroup(nodeIds, edgeIds, groupName);
+    } catch (error) {
+      console.error('Failed to create group:', error);
+      // Group creation will continue locally even if API fails
+    }
   };
 
   // Ungroup selected group nodes
-  const handleUngroup = () => {
+  const handleUngroup = async () => {
     const groupNodes = selectedNodes.filter(node => node.type === 'group');
     
-    groupNodes.forEach(groupNode => {
-      ungroupNodes(groupNode.id);
-    });
+    try {
+      for (const groupNode of groupNodes) {
+        await ungroupNodes(groupNode.id);
+      }
+    } catch (error) {
+      console.error('Failed to ungroup nodes:', error);
+      // Ungrouping will continue locally even if API fails
+    }
   };
 
-  return (
+  return selectedNodes.length === 1 && selectedNodes[0].type === 'group' ? null : (
     <NodeToolbar
       nodeId={selectedNodeIds}
       isVisible

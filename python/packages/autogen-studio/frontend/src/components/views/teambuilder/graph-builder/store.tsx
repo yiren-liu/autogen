@@ -12,8 +12,12 @@ import {
   DiGraph,
   DiGraphNode,
   DiGraphEdge,
+  Group,
+  GroupNode,
+  GroupEdge,
 } from "../../../types/datamodel";
 import { CustomNode, CustomEdge } from "./types";
+import { groupAPI } from "../api";
 
 // Helper to generate IDs
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -24,6 +28,8 @@ interface GraphBuilderState {
   selectedNodeId: string | null;
   history: Array<{ nodes: CustomNode[]; edges: CustomEdge[] }>;
   currentHistoryIndex: number;
+  // Add user context tracking
+  userId: string | null;
 
   // Actions
   setNodes: (nodes: CustomNode[]) => void;
@@ -33,10 +39,11 @@ interface GraphBuilderState {
   deleteNode: (nodeId: string) => void;
   setSelectedNode: (nodeId: string | null) => void;
   updateEdgeData: (edgeId: string, data: Record<string, any>) => void;
+  setUserId: (userId: string | null) => void;
   
-  // Grouping actions
-  createGroup: (nodeIds: string[], edgeIds: string[], groupName?: string) => string;
-  ungroupNodes: (groupId: string) => void;
+  // Grouping actions with API integration
+  createGroup: (nodeIds: string[], edgeIds: string[], groupName?: string) => Promise<string>;
+  ungroupNodes: (groupId: string) => Promise<void>;
   
   // Graph-specific actions
   addGraphEdge: (sourceId: string, targetId: string, condition?: string) => void;
@@ -272,6 +279,7 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
     selectedNodeId: null,
     history: [],
     currentHistoryIndex: -1,
+    userId: null,
 
     setNodes: (nodes) => set({ nodes }),
     setEdges: (edges) => set({ edges }),
@@ -494,7 +502,7 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
       get().addToHistory();
     },
 
-    createGroup: (nodeIds, edgeIds, groupName) => {
+    createGroup: async (nodeIds, edgeIds, groupName) => {
       const { nodes, edges } = get();
       const groupId = `group-${generateId()}`;
       
@@ -577,10 +585,52 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
       });
       get().addToHistory();
       
+      // Call API to persist group if userId is available
+      const { userId } = get();
+      if (userId) {
+        try {
+          const groupData: Partial<Group> = {
+            name: groupName || `Component Group ${nodesToGroup.length}`,
+            description: `Group containing ${nodesToGroup.length} components`,
+            nodes: nodesToGroup.map(node => ({
+              id: node.id,
+              node_type: node.data.type as any,
+              node_config: node.data.component.config,
+              label: String(node.data.label || 'Untitled'),
+              position: node.position,
+              relative_position: {
+                x: node.position.x - bounds.minX + 20,
+                y: node.position.y - bounds.minY + 20,
+              },
+            })),
+            edges: edgesToGroup.map(edge => ({
+              id: edge.id,
+              source_node_id: edge.source,
+              target_node_id: edge.target,
+              edge_type: edge.type || 'default',
+              edge_data: edge.data,
+            })),
+            layout_info: {
+              bounds: {
+                x: bounds.minX - 20,
+                y: bounds.minY - 20,
+                width: bounds.maxX - bounds.minX + 40,
+                height: bounds.maxY - bounds.minY + 40,
+              },
+            },
+          };
+          
+          await groupAPI.createGroup(groupData, userId);
+        } catch (error) {
+          console.error('Failed to persist group to backend:', error);
+          // Continue with local grouping even if API fails
+        }
+      }
+      
       return groupId;
     },
 
-    ungroupNodes: (groupId) => {
+    ungroupNodes: async (groupId) => {
       const { nodes, edges } = get();
       
       const groupNode = nodes.find(node => node.id === groupId);
@@ -619,6 +669,23 @@ export const useGraphBuilderStore = create<GraphBuilderState>()(
         edges: updatedEdges 
       });
       get().addToHistory();
+      
+      // Call API to delete group if userId is available
+      const { userId } = get();
+      if (userId) {
+        try {
+          // Extract the numeric ID from the groupId (assuming format: "group-{id}")
+          const numericGroupId = parseInt(groupId.replace('group-', ''));
+          if (!isNaN(numericGroupId)) {
+            await groupAPI.deleteGroup(numericGroupId, userId);
+          }
+        } catch (error) {
+          console.error('Failed to delete group from backend:', error);
+          // Continue with local ungrouping even if API fails
+        }
+      }
     },
+
+    setUserId: (userId) => set({ userId }),
   }))
 );
