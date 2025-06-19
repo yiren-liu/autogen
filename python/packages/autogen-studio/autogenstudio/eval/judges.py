@@ -1,4 +1,5 @@
 import asyncio
+import json_repair
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -138,7 +139,6 @@ class LLMEvalJudge(BaseEvalJudge, Component[LLMEvalJudgeConfig]):
         model_result = await self.model_client.create(
             messages=model_input,
             cancellation_token=cancellation_token,
-            json_output=EvalDimensionScore,
         )
 
         # Extract content from the response
@@ -146,7 +146,9 @@ class LLMEvalJudge(BaseEvalJudge, Component[LLMEvalJudgeConfig]):
 
         try:
             # validate response string as EvalDimensionScore
-            model_response = EvalDimensionScore.model_validate_json(model_response)
+            model_response = json_repair.loads(model_response)
+            # model_response = EvalDimensionScore.model_validate_json(model_response)
+            model_response = EvalDimensionScore(**model_response, max_value=criterion.max_value, min_value=criterion.min_value)
             return model_response
         except Exception as e:
             logger.warning(f"Failed to parse LLM response: {e}", model_result.content)
