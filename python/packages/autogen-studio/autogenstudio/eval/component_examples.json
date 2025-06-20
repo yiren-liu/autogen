@@ -1,0 +1,727 @@
+{
+    "e2e": {
+        "provider": "autogen_agentchat.teams.GraphFlow",
+        "component_type": "graph",
+        "version": 1,
+        "component_version": 1,
+        "description": "A graph-based conversation flow",
+        "label": "Graph Flow",
+        "config": {
+            "participants": [
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "campaign_mgr",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Manage the campaign and ensure it is on track to meet the user's needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "email_gen",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Generate an email for the user's needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "tv_planner",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Plan the TV campaign for the user's needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "website_gen",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Generate a website for the user's needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "headline_gen",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Generate a headline for the user's needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "localizer",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Localize the ad copy for the user's needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "stakeholder_review",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Review ideas and say 'REVISE' and provide feedbacks, or 'APPROVE' for final approval.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "output_sink",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Output the ad copy for the user's needs as a comprehensive report.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "user_data_analyst",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Analyze the user's data to determine the best way to meet their needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "concept_ideation",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Generate a concept for the user's needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "need_analysis",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Analyze the user's needs and preferences to determine the best way to meet their needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                },
+                {
+                    "provider": "autogen_agentchat.agents.AssistantAgent",
+                    "component_type": "agent",
+                    "version": 1,
+                    "component_version": 1,
+                    "description": "An agent that provides assistance with tool use.",
+                    "label": "AssistantAgent",
+                    "config": {
+                        "name": "social_analyst",
+                        "model_client": {
+                            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+                            "component_type": "model",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "Chat completion client for OpenAI hosted models.",
+                            "label": "OpenAIChatCompletionClient",
+                            "config": {
+                                "temperature": 0.7,
+                                "model": "gpt-4o"
+                            }
+                        },
+                        "workbench": {
+                            "provider": "autogen_core.tools.StaticWorkbench",
+                            "component_type": "workbench",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+                            "label": "StaticWorkbench",
+                            "config": {
+                                "tools": []
+                            }
+                        },
+                        "model_context": {
+                            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+                            "component_type": "chat_completion_context",
+                            "version": 1,
+                            "component_version": 1,
+                            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+                            "label": "UnboundedChatCompletionContext",
+                            "config": {}
+                        },
+                        "description": "An agent that provides assistance with ability to use tools.",
+                        "system_message": "Analyze the user's social media presence and preferences to determine the best way to meet their needs.",
+                        "model_client_stream": false,
+                        "reflect_on_tool_use": false,
+                        "tool_call_summary_format": "{result}",
+                        "metadata": {}
+                    }
+                }
+            ],
+            "graph": {
+                "nodes": {
+                    "campaign_mgr": {
+                        "name": "campaign_mgr",
+                        "edges": [
+                            {
+                                "target": "email_gen"
+                            },
+                            {
+                                "target": "tv_planner"
+                            },
+                            {
+                                "target": "website_gen"
+                            },
+                            {
+                                "target": "headline_gen"
+                            },
+                            {
+                                "target": "localizer"
+                            },
+                            {
+                                "target": "stakeholder_review"
+                            }
+                        ],
+                        "activation": "all"
+                    },
+                    "email_gen": {
+                        "name": "email_gen",
+                        "edges": [],
+                        "activation": "all"
+                    },
+                    "tv_planner": {
+                        "name": "tv_planner",
+                        "edges": [
+                            {
+                                "target": "website_gen"
+                            }
+                        ],
+                        "activation": "all"
+                    },
+                    "website_gen": {
+                        "name": "website_gen",
+                        "edges": [],
+                        "activation": "all"
+                    },
+                    "headline_gen": {
+                        "name": "headline_gen",
+                        "edges": [],
+                        "activation": "all"
+                    },
+                    "localizer": {
+                        "name": "localizer",
+                        "edges": [
+                            {
+                                "target": "stakeholder_review"
+                            }
+                        ],
+                        "activation": "all"
+                    },
+                    "stakeholder_review": {
+                        "name": "stakeholder_review",
+                        "edges": [
+                            {
+                                "target": "campaign_mgr",
+                                "condition": "REVISE"
+                            },
+                            {
+                                "target": "output_sink",
+                                "condition": "SUBMIT"
+                            }
+                        ],
+                        "activation": "all"
+                    },
+                    "output_sink": {
+                        "name": "output_sink",
+                        "edges": [],
+                        "activation": "all"
+                    },
+                    "user_data_analyst": {
+                        "name": "user_data_analyst",
+                        "edges": [
+                            {
+                                "target": "need_analysis",
+                                "condition": "UPDATE"
+                            }
+                        ],
+                        "activation": "all"
+                    },
+                    "concept_ideation": {
+                        "name": "concept_ideation",
+                        "edges": [
+                            {
+                                "target": "campaign_mgr"
+                            }
+                        ],
+                        "activation": "all"
+                    },
+                    "need_analysis": {
+                        "name": "need_analysis",
+                        "edges": [
+                            {
+                                "target": "concept_ideation"
+                            },
+                            {
+                                "target": "social_analyst"
+                            },
+                            {
+                                "target": "user_data_analyst"
+                            }
+                        ],
+                        "activation": "all"
+                    },
+                    "social_analyst": {
+                        "name": "social_analyst",
+                        "edges": [
+                            {
+                                "target": "need_analysis",
+                                "condition": "UPDATE"
+                            }
+                        ],
+                        "activation": "all"
+                    }
+                },
+                "default_start_node": "campaign_mgr"
+            }
+        }
+    }
+}
