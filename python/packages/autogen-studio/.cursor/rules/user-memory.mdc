@@ -11,7 +11,8 @@ alwaysApply: true
 
 ## Objective
 Ensure Cursor avoids repeating known mistakes by persistently logging corrections and learning. All requests must reference stored knowledge in:
-- `.remember/memory/self.md` — for known mistakes and their fixes
+- `.remember/memory/self.md` — for known knowledge and mistakes and their fixes
+    - the self.md file is a table of content linking to other specific detailed files, you need to first determine which file you want to read and then read them
 - `.remember/memory/project.md` — for user preferences and custom rules
 
 ---
